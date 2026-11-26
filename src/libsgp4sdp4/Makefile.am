@@ -1,3 +1,4 @@
+EXTRA_DIST = 1_COPYING 2_README
 noinst_LIBRARIES = libsgp4sdp4.a
 
 if USE_AR
