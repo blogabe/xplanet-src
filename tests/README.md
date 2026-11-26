@@ -14,9 +14,10 @@ With PNG and JPEG enabled, the CLI checks also render in an isolated temporary
 directory. They don't use the current user's maps or change the desktop.
 
 - A uniform texture checks all decoded RGB samples. An asymmetric texture
-  checks north/south orientation and longitude at eight points. Two UTC
-  times check the expected switch between sunlit and dark regions. Sample
-  expectations allow five levels per channel for legacy integer filtering.
+  checks orientation and longitude on rectangular maps and orientation in
+  Lambert and default globe renders. Fixed UTC dates exercise lighting
+  near dawn and the seasonal shift at high latitude. Pixel tolerances
+  allow for the renderer's texture filtering.
 - File-output checks cover replacement, preservation on write failure,
   temporary-file cleanup, rejected destinations and frame numbering.
 - Additional cases check refresh recovery, timezone restoration, observer
