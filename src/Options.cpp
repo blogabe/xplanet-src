@@ -925,6 +925,7 @@ Options::parseArgs(int argc, char **argv)
             break;
         case VERSIONNUMBER:
             printVersion();
+            cout << "TLE catalog IDs: Alpha-5" << endl;
             exit(EXIT_SUCCESS);
             break;
         case VROOT:

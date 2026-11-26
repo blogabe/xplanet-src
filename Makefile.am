@@ -50,4 +50,4 @@ nobase_dist_data_DATA = \
 	xplanet/spice/voyager.krn	\
 	xplanet/stars/BSC
 
-EXTRA_DIST = xplanet.1 $(sources) LICENSE prepare-build.sh
+EXTRA_DIST = xplanet.1 $(sources) LICENSE prepare-build.sh tests/README.md tests/tle_catalog.c

@@ -38,6 +38,29 @@ Checksum_Good( char *tle_set )
 
 /*------------------------------------------------------------------*/
 
+/* Space-Track Alpha-5 extends the five-column field without changing
+   any of the orbital data. I and O are not part of the alphabet. */
+static int
+Catalog_Number(const char *field)
+{
+  static const char prefix[] = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  int i = 0, number = 0;
+  const char *letter = strchr(prefix, field[0]);
+  if (letter != NULL && *letter != '\0')
+    {
+      number = (int)(letter - prefix) + 10;
+      i = 1;
+    }
+  else
+    while (i < 4 && field[i] == ' ') i++;
+  for (; i < 5; i++)
+    {
+      if (field[i] < '0' || field[i] > '9') return 0;
+      number = 10 * number + (field[i] - '0');
+    }
+  return number;
+}
+
 /* Carries out various checks on a TLE set to verify its validity */
 /* tle_set is a character string holding the two lines read    */
 /* from a text file containing NASA format Keplerian elements. */
@@ -51,7 +74,8 @@ Good_Elements( char *tle_set )
   if( (tle_set[0] != '1') || (tle_set[69] != '2') )
     return (0);
   /* Verify that Satellite Number is same in both lines */
-  if( strncmp( &tle_set[2], &tle_set[71], 5 ) != 0 )
+  if( Catalog_Number(&tle_set[2]) == 0
+      || strncmp( &tle_set[2], &tle_set[71], 5 ) != 0 )
     return (0);
   /* Check that various elements are in the right place */
   if( 
@@ -82,9 +106,7 @@ Convert_Satellite_Data( char *tle_set, tle_t *tle )
 
   /** Decode Card 1 **/
   /* Satellite's catalogue number */
-  strncpy( buff, &tle_set[2],5 );
-  buff[5] = '\0';
-  tle->catnr = atoi(buff);
+  tle->catnr = Catalog_Number(&tle_set[2]);
 
   /* International Designator for satellite */
   strncpy( tle->idesg, &tle_set[9],8 );
