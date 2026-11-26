@@ -75,6 +75,8 @@ if grep -Eq '^[[:space:]]+JPEG[[:space:]]*$' version.txt; then
     printf '[earth]\nmap=earth.jpg\nnight_map=night.jpg\n' >maps.conf
     check 0 maps -validate -searchdir "$source/xplanet" -config maps.conf
     grep -q '"diagnostics":\[\]' maps.json
+    check 0 bundled_overlay -validate -searchdir "$source/xplanet" -config overlay_clouds
+    grep -q '"severity":"warning","code":"missing_file".*"field":"earth.cloud_map"' bundled_overlay.json
 fi
 if grep -q '"schema_version"' version.txt; then
     echo "A label containing the validation selector started validation" >&2
@@ -119,9 +121,12 @@ check 1 missing_marker -validate -config good.conf -searchdir "$source/xplanet" 
 grep -q 'quoted\\"name.txt' missing_marker.json
 
 printf '20261126.120000 10 0 0\nnot an observer record\n' >observer
-check 1 origin -validate -searchdir "$source/xplanet" -config good.conf \
+check 0 origin -validate -searchdir "$source/xplanet" -config good.conf \
     -origin_file observer -interpolate_origin_file
-grep -q '"path":"observer","line":2' origin.json
+grep -q '"severity":"warning","code":"resource".*"path":"observer","line":2' origin.json
+printf '%s\n' 'not an observer record' > empty-observer
+check 1 empty_origin -validate -config good.conf -origin_file empty-observer
+grep -q '"severity":"error","code":"resource".*No usable records' empty_origin.json
 
 printf '[earth]\nmap=none\n' >flat.conf
 check 0 flat -validate -config flat.conf -body earth
@@ -133,9 +138,37 @@ OBJECT_NAME,NORAD_CAT_ID,EPOCH,MEAN_MOTION,ECCENTRICITY,INCLINATION,RA_OF_ASC_NO
 Example nine digits,987654321,2026-11-25T12:00:00.123456,14.89,0.00072,98,98,55,95,0.00019,0.00009,0
 CSV
 printf '[earth]\nmap=none\nsatellite_file=tracked\n' >satellites.conf
-printf '987654321 "" image=none trail_output=trail-not-created\n' >tracked
+printf '987654321 "" image=none colour=red bogus=1 trail_output=trail-not-created\n' >tracked
 check 0 satellite -validate -config satellites.conf
 [ ! -e trail-not-created ]
+grep -q '"severity":"info","code":"satellite_orbit_source".*"path":"tracked.omm.csv"' satellite.json
+tail -n 1 tracked.omm.csv > duplicate-row
+cat duplicate-row >> tracked.omm.csv
+check 0 satellite_duplicate -validate -config satellites.conf
+grep -q '"severity":"warning","code":"resource".*Duplicate NORAD_CAT_ID.*"line":3' satellite_duplicate.json
+
+# The local marker's OMM CSV beats a bundled TLE with the same basename.
+local_dir='local"catalog'
+mkdir "$local_dir"
+cp tracked "$local_dir/iss"
+cp tracked.omm.csv "$local_dir/iss.omm.csv"
+printf '[earth]\nmap=none\nsatellite_file=iss\n' > local.conf
+check 0 local_companion -validate -config local.conf -searchdir "$source/xplanet" \
+    -searchdir "$PWD/$local_dir"
+grep '"code":"satellite_orbit_source"' local_companion.json | grep -Fq 'local\"catalog/iss.omm.csv'
+
+# The same directory still prefers TLE, and unusable data is an error.
+cp "$source/xplanet/satellites/iss.tle" "$local_dir/iss.tle"
+printf '25544 "" image=none\n' > "$local_dir/iss"
+check 0 same_directory -validate -config local.conf -searchdir "$source/xplanet" \
+    -searchdir "$PWD/$local_dir"
+grep '"code":"satellite_orbit_source"' same_directory.json | grep -Fq 'local\"catalog/iss.tle'
+rm "$local_dir/iss.tle"
+printf 'invalid TLE\n' > "$local_dir/iss.tle"
+check 1 broken_companion -validate -config local.conf -searchdir "$source/xplanet" \
+    -searchdir "$PWD/$local_dir"
+grep -q '"severity":"error","code":"resource".*No usable TLE orbital records' broken_companion.json
+
 printf '# Active satellites\n100057 "" image=none\n' >tracked
 check 1 unmatched_satellite -validate -config satellites.conf
 grep -q '"code":"unknown_satellite"' unmatched_satellite.json

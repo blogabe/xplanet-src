@@ -29,8 +29,10 @@ directory. They don't use the current user's maps or change the desktop.
   records, invalid options, exact decimal notation for integer settings,
   and continued rendering after overlong annotation and TLE records.
 
-Separate CLI checks exercise six- and nine-digit OMM overlays, existing
-TLE precedence, and the side-effect-free `-validate` JSON and exit status.
+Separate CLI checks compare fixed-date TLE and OMM images and trail
+coordinates and exercise six- and nine-digit OMM IDs, companion search
+precedence, legacy marker options, bounded propagation warnings, and the
+side-effect-free `-validate` JSON and exit status.
 
 When building from a Git checkout, run `./prepare-build.sh` before configuring
 if timestamps would trigger regeneration. For changes to the build inputs,

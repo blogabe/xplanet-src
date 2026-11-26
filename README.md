@@ -70,8 +70,9 @@ xplanet -validate -target earth -searchdir ./my-scene -config earth.conf
 It writes one JSON report to stdout and exits with status 0 for a valid
 scene or 1 for errors. The report has `schema_version`, `valid` and
 `diagnostics` keys. Each diagnostic has a `severity`, `code` and `message`,
-with file, line and field details where known. Warnings alone do not fail
-validation. The check parses scene options, config, observer data and
+with file, line and field details where known. Recoverable issues, such as
+a duplicate OMM row or missing cloud image, are warnings and do not fail
+validation. An info diagnostic names the selected orbit file. The check parses scene options, config, observer data and
 satellite elements, verifies satellite IDs, decodes configured maps and
 checks the native JPL header. Other resources, including marker and arc
 files, fonts, star catalogs and SPICE inputs, are checked for readability,
@@ -83,7 +84,9 @@ render or Finder success.
 Existing TLE and Alpha-5 configurations still work. To use CelesTrak's
 OMM CSV, point `satellite_file` to a marker list (for example, `tracked`).
 Save the CSV beside it as `tracked.omm.csv` and put the decimal catalog IDs
-in `tracked`. If a matching `tracked.tle` exists, Xplanet uses it instead.
+in `tracked`. Xplanet looks beside the selected marker list first, then
+checks the rest of the search path. If both formats are present in the
+same directory, it uses TLE.
 
 Use an Earth, TEME, UTC, SGP4 element set. The reader accepts IDs up to nine
 digits and reads the CSV directly without converting it to TLE. See the

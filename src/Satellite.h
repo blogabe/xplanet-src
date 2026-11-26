@@ -23,7 +23,8 @@ class Satellite
 {
 public:
     Satellite(char tle_line[3][80]);
-    Satellite(const sgp4sdp4::tle_t &elements, const std::string &name);
+    Satellite(const sgp4sdp4::tle_t &elements, const std::string &name,
+              const std::string &source);
 
     ~Satellite();
     bool isGoodData() const;
@@ -42,6 +43,9 @@ private:
     char tle_entry[3][80] = {};
     sgp4sdp4::tle_t ommElements = {};
     std::string ommName;
+    std::string ommSource;
+
+    bool propagationFailed(const char *reason) const;
 
     sgp4sdp4::tle_t tle = {};
 };
@@ -49,7 +53,8 @@ private:
 // Parse a decimal catalog ID accepted in satellite annotation files.
 bool parseSatelliteCatalogId(const char *text, int &id);
 
-// Read <name>.tle, otherwise <name>.omm.csv, appending any usable orbits.
+// Load the first orbit companion by directory priority, preferring TLE only
+// within a directory. Append usable orbits even if other records warn.
 bool readSatelliteOrbitFile(const std::string &name, std::vector<Satellite> &satellites);
 
 #endif

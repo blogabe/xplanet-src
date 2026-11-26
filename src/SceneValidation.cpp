@@ -1,10 +1,12 @@
 #include <algorithm>
 #include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <memory>
 #include <set>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "config.h"
@@ -135,12 +137,12 @@ class Resources
 {
 public:
     bool check(std::string &path, const char *dir, const std::string &field,
-               bool optional = false)
+               const char *missingSeverity = "error")
     {
         if (path.empty()) return false;
         if (findFile(path, dir, false)) return true;
-        if (!optional && missing_.emplace(dir, path).second)
-            add("error", "missing_file", "Cannot find a readable file in the scene search path.",
+        if (missingSeverity != nullptr && missing_.emplace(dir, path, missingSeverity).second)
+            add(missingSeverity, "missing_file", "Cannot find a readable file in the scene search path.",
                 path, field);
         return false;
     }
@@ -150,9 +152,9 @@ public:
         check(path, dir, field);
     }
 
-    void image(std::string path, const std::string &field, bool optional = false)
+    void image(std::string path, const std::string &field, const char *missingSeverity = "error")
     {
-        if (!check(path, "images", field, optional) || !images_.insert(path).second)
+        if (!check(path, "images", field, missingSeverity) || !images_.insert(path).second)
             return;
         Image image;
         if (!image.Read(path.c_str()))
@@ -160,7 +162,7 @@ public:
     }
 
 private:
-    std::set<std::pair<std::string, std::string>> missing_;
+    std::set<std::tuple<std::string, std::string, std::string>> missing_;
     std::set<std::string> images_;
 };
 
@@ -187,7 +189,7 @@ void validateSatelliteMarkers(Resources &resources, std::string path,
         if (isEndOfLine(line[i])) continue;
 
         bool sawId = false;
-        while (!isEndOfLine(line[i]))
+        while (static_cast<std::size_t>(i) < std::strlen(line) && !isEndOfLine(line[i]))
         {
             char *value = nullptr;
             const int kind = parse(i, line, value);
@@ -195,12 +197,10 @@ void validateSatelliteMarkers(Resources &resources, std::string path,
             if (kind == ENDOFLINE) break;
             if (kind == LATLON)
             {
-                sawId = true;
                 int id;
-                if (!parseSatelliteCatalogId(value, id))
-                    add("error", "invalid_satellite", "Invalid satellite catalog ID.",
-                        path, "earth.satellite_file", number);
-                else if (!containsOrbit(orbits, id))
+                if (!parseSatelliteCatalogId(value, id)) continue; // Ignore extra options, like rendering.
+                sawId = true;
+                if (!containsOrbit(orbits, id))
                     add("error", "unknown_satellite", "No configured orbit records contain catalog ID "
                         + std::to_string(id) + ".", path, "earth.satellite_file", number);
             }
@@ -212,7 +212,7 @@ void validateSatelliteMarkers(Resources &resources, std::string path,
 #endif
         }
         if (!sawId)
-            add("error", "invalid_satellite", "Satellite marker row does not specify a catalog ID.",
+            add("error", "invalid_satellite", "Satellite marker row does not specify a valid catalog ID.",
                 path, "earth.satellite_file", number);
     }
 }
@@ -230,12 +230,12 @@ void validateConfig(Resources &resources, const Options &options,
         if (p.DayMapExplicit() && p.DayMap().empty())
             add("error", "missing_file", "Set a readable day map or use map=none.", {}, name + "map");
         else if (p.DayMap() != "none" && (p.DayMapExplicit() || i == options.Target()))
-            resources.image(p.DayMap(), name + "map", !p.DayMapExplicit());
+            resources.image(p.DayMap(), name + "map", p.DayMapExplicit() ? "error" : nullptr);
 
-        resources.image(p.NightMap(), name + "night_map");
-        resources.image(p.BumpMap(), name + "bump_map");
-        resources.image(p.CloudMap(), name + "cloud_map");
-        resources.image(p.SpecularMap(), name + "specular_map");
+        if (p.Shade() < 1) resources.image(p.NightMap(), name + "night_map", "warning");
+        resources.image(p.BumpMap(), name + "bump_map", "warning");
+        resources.image(p.CloudMap(), name + "cloud_map", "warning");
+        resources.image(p.SpecularMap(), name + "specular_map", "warning");
         resources.file(p.RayleighFile(), "scattering", name + "rayleigh_file");
 
 #ifdef HAVE_LIBFREETYPE
@@ -248,8 +248,7 @@ void validateConfig(Resources &resources, const Options &options,
         {
             if (!satelliteFiles.insert(path).second) continue;
             const Location location(path);
-            if (!readSatelliteOrbitFile(path, orbits))
-                report->invalid = true; // The shared reader supplies diagnostics.
+            readSatelliteOrbitFile(path, orbits); // The shared reader supplies diagnostics.
         }
     }
     for (const auto &path : satelliteFiles) validateSatelliteMarkers(resources, path, orbits);
@@ -343,12 +342,25 @@ Location::~Location()
 
 void parserWarning(const std::string &message)
 {
+    add("warning", report->stage, message, report->path, {}, report->line);
+}
+
+void requiredResourceError(const std::string &message)
+{
     add("error", report->stage, message, report->path, {}, report->line);
+}
+
+void satelliteOrbitSource(const std::string &marker, const std::string &path,
+                          const char *format)
+{
+    if (active())
+        add("info", "satellite_orbit_source", std::string("Using ") + format
+            + " orbital elements for " + marker + ".", path, "earth.satellite_file");
 }
 
 [[noreturn]] void parserError(const std::string &message)
 {
-    parserWarning(message);
+    requiredResourceError(message);
     throw ParseFailure{};
 }
 

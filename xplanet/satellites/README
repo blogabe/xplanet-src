@@ -7,9 +7,11 @@ For a marker list named tracked, supply one of these companions:
     tracked.tle       TLE input, including Alpha-5
     tracked.omm.csv   OMM fields in CelesTrak's GP CSV format
 
-If both companions exist, the TLE file takes precedence. Keep existing TLE
-setups as they are; use a new marker-list name or remove the corresponding
-TLE from the search path when switching a list to OMM.
+Xplanet looks beside the selected marker list first, then checks the rest
+of the search path in order. If both companions exist in the same
+directory, TLE takes precedence. A bundled TLE in a different directory
+does not override a CSV beside your own marker list. Use -validate to see
+which orbit file was selected.
 
 The bundled iss.tle is historical, not live. CelesTrak does not offer TLEs
 for newly assigned six-digit catalog numbers since the five-digit range

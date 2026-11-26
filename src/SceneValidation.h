@@ -11,6 +11,9 @@ namespace SceneValidation
 bool active();
 int run(Options &options, int argc, char **argv);
 void parserWarning(const std::string &message);
+void requiredResourceError(const std::string &message);
+void satelliteOrbitSource(const std::string &marker, const std::string &path,
+                          const char *format);
 [[noreturn]] void parserError(const std::string &message);
 
 // Attach config locations to diagnostics from the shared parser.
