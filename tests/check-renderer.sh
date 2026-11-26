@@ -77,19 +77,21 @@ printf '%b' '\0211\0120\0116\0107\0015\0012\0032\0012\0000\0000\0000\0015\0111\0
 
 render_map()
 {
-    "$binary" -searchdir "$assets" -target earth -projection rectangular \
-        -longitude 0 -latitude 0 -geometry 320x160 -date "$1" \
-        -config "$2" -num_times 1 -output "$3"
+    date=$1 config=$2 output=$3
+    shift 3
+    "$binary" -searchdir "$assets" -target earth \
+        -geometry 320x160 -date "$date" -config "$config" \
+        -num_times 1 -output "$output" "$@"
 }
 
 # The output encoder writes 24-bit BMP, padded per row (320*3 has no padding).
 # x/y are measured from the image top-left, not BMP's bottom-up byte order.
 assert_rgb()
 {
-    image=$1 x=$2 y=$3 r=$4 g=$5 b=$6
+    image=$1 x=$2 y=$3 r=$4 g=$5 b=$6 tolerance=${7:-5}
     offset=$((54 + (159 - y) * 320 * 3 + x * 3))
-    if ! od -An -v -tu1 -j "$offset" -N3 "$image" | awk -v r="$r" -v g="$g" -v b="$b" '
-        function near(actual, expected) { return actual >= expected-5 && actual <= expected+5 }
+    if ! od -An -v -tu1 -j "$offset" -N3 "$image" | awk -v r="$r" -v g="$g" -v b="$b" -v tolerance="$tolerance" '
+        function near(actual, expected) { return actual >= expected-tolerance && actual <= expected+tolerance }
         NF { ok = NF == 3 && near($1,b) && near($2,g) && near($3,r); ++rows }
         END { exit !(rows == 1 && ok) }
     '; then
@@ -104,7 +106,7 @@ assert_rgb()
 # Explicit expected positions are independent of the rendered pixels.
 printf '[earth]\nmap=%s/asymmetric.png\nnight_map=%s/asymmetric.png\nshade=100\n' \
     "$PWD" "$PWD" > asymmetric.conf
-render_map 20260320.120000 asymmetric.conf oriented.bmp
+render_map 20260320.120000 asymmetric.conf oriented.bmp -projection rectangular -longitude 0 -latitude 0
 assert_rgb oriented.bmp  40  40  34 161 189
 assert_rgb oriented.bmp 120  40 165  48 123
 assert_rgb oriented.bmp 200  40 112 188  62
@@ -115,18 +117,56 @@ assert_rgb oriented.bmp 200 120  74  43 174
 assert_rgb oriented.bmp 280 120 186 133  44
 printf '%s\n' 'Rectangular render preserves eight latitude/longitude color samples'
 
+# At ±45°, cylindrical equal-area (Lambert) places the same texture bands
+# at y=80*(1∓sin(45°)), rather than the rectangular rows 40 and 120.
+render_map 20260320.120000 asymmetric.conf lambert.bmp \
+    -projection lambert -longitude 0 -latitude 0
+assert_rgb lambert.bmp 120  23 165 48 123
+assert_rgb lambert.bmp 200 137  74 43 174
+
+# No projection option: test the globe, centered on the 45°E texture band.
+# On its central meridian points above and below the equator must land in
+# opposite hemispheres. A 90%-radius disk leaves the corner as background.
+# The globe's texture filtering needs a wider tolerance than the flat maps.
+render_map 20260320.120000 asymmetric.conf globe.bmp \
+    -longitude 45 -latitude 0 -radius 90
+assert_rgb globe.bmp 160  29 112 188 62 24
+assert_rgb globe.bmp 160 131  74  43 174 24
+assert_rgb globe.bmp  10  10   0   0   0
+printf '%s\n' 'Lambert and default globe preserve latitude orientation'
+
 # Near equinox, -45° longitude is lit at noon UTC and +135° at midnight UTC.
 # Both samples are far from the terminator, so expect the exact lit or night
 # texture (within the same tolerance), not a renderer-generated golden image.
 printf '[earth]\nmap=%s/asymmetric.png\nnight_map=%s/dark.png\nshade=0\n' \
     "$PWD" "$PWD" > lighting.conf
-render_map 20260320.120000 lighting.conf noon.bmp
-render_map 20260320.000000 lighting.conf midnight.bmp
+render_map 20260320.120000 lighting.conf noon.bmp -projection rectangular -longitude 0 -latitude 0
+render_map 20260320.000000 lighting.conf midnight.bmp -projection rectangular -longitude 0 -latitude 0
 assert_rgb noon.bmp     120 40 165 48 123
 assert_rgb noon.bmp     280 40   0  0   0
 assert_rgb midnight.bmp 120 40   0  0   0
 assert_rgb midnight.bmp 280 40 188 91 142
 printf '%s\n' 'Fixed dates swap the expected day and night samples'
+
+# Expand the verified uniform texture to full resolution so interpolation
+# across the terminator does not blur the reference locations.
+render -config solid.conf -num_times 1 -output expanded-solid.png
+
+# Probe real day/night boundaries rather than only their interiors. Around
+# equinox, 15°W on the equator crosses dawn between 06:00 and 08:00 UTC.
+# At 60°N, 102°E at noon UTC is dark at the March equinox but sunlit
+# a month later as northern solar declination increases.
+printf '[earth]\nmap=%s/expanded-solid.png\nshade=0\ntwilight=0\n' \
+    "$PWD" > terminator.conf
+render_map 20260320.060000 terminator.conf dawn-before.bmp -projection rectangular -longitude 0 -latitude 0
+render_map 20260320.080000 terminator.conf dawn-after.bmp -projection rectangular -longitude 0 -latitude 0
+render_map 20260320.120000 terminator.conf march.bmp -projection rectangular -longitude 0 -latitude 0
+render_map 20260419.120000 terminator.conf april.bmp -projection rectangular -longitude 0 -latitude 0
+assert_rgb dawn-before.bmp 147 80 0 0 0
+assert_rgb march.bmp 251 27 0 0 0
+assert_rgb dawn-after.bmp 147 80 40 70 120
+assert_rgb april.bmp 251 27 40 70 120
+printf '%s\n' 'Equatorial dawn and high-latitude twilight follow the UTC date'
 
 fail_output()
 {
