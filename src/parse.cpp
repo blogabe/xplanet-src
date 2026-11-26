@@ -89,26 +89,30 @@ getValueIncludingComment(const char *line, int &i, const char *key,
     return(returnValue);
 }
 
+// Match a prefixed assignment only when its separator is on this line.
 static bool
 getValueAfter(const char *line, int &i, const char *key, const char endChar,
-         char *&returnstring)
-// If the line contains the 'key', skip past 'endChar' and return
-// everything to the end of the line in 'returnString'
+              char *&returnstring)
 {
-    const unsigned int length = strlen(key);
-    if (strncmp(line + i, key, length) == 0)
+    const size_t length = strlen(key);
+    if (strncmp(line + i, key, length) != 0) return false;
+
+    int separator = i + length;
+    while (line[separator] != endChar)
     {
-        i += length;
-        skipPastToken(i, line, endChar);        // Skips 'to' endChar
-        int istart = i + 1;     // Add another to not include endChar
-        skipPastToken(i, line);
-        returnstring = new char[i - istart + 1];
-        strncpy(returnstring, (line + istart), i - istart);
-        returnstring[i-istart] = '\0';
-        i++;
-        return(true);
+        if (isEndOfLine(line[separator])) return false;
+        ++separator;
     }
-    return(false);
+
+    const int start = separator + 1;
+    i = start;
+    skipPastToken(i, line);
+    const size_t count = i - start;
+    returnstring = new char[count + 1];
+    memcpy(returnstring, line + start, count);
+    returnstring[count] = '\0';
+    ++i;
+    return true;
 }
 
 static bool
