@@ -415,7 +415,7 @@ nobase_dist_data_DATA = \
 	xplanet/spice/voyager.krn	\
 	xplanet/stars/BSC
 
-EXTRA_DIST = xplanet.1 $(sources) LICENSE prepare-build.sh tests/README.md tests/tle_catalog.c
+EXTRA_DIST = xplanet.1 $(sources) LICENSE README.md prepare-build.sh tests/README.md tests/tle_catalog.c tests/check-renderer.sh
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -840,7 +840,7 @@ distcleancheck: distclean
 	  || { echo "ERROR: files left in build directory after distclean:" ; \
 	       $(distcleancheck_listfiles) ; \
 	       exit 1; } >&2
-check-am: all-am
+check-am: all-am check-local
 check: check-recursive
 all-am: Makefile $(MANS) $(DATA) config.h
 installdirs: installdirs-recursive
@@ -952,7 +952,7 @@ uninstall-man: uninstall-man1
 .MAKE: $(am__recursive_targets) all install-am install-strip
 
 .PHONY: $(am__recursive_targets) CTAGS GTAGS TAGS all all-am \
-	am--refresh check check-am clean clean-cscope clean-generic \
+	am--refresh check check-am check-local clean clean-cscope clean-generic \
 	cscope cscopelist-am ctags ctags-am dist dist-all dist-bzip2 \
 	dist-gzip dist-lzip dist-shar dist-tarZ dist-xz dist-zip \
 	dist-zstd distcheck distclean distclean-generic distclean-hdr \
@@ -970,6 +970,17 @@ uninstall-man: uninstall-man1
 
 .PRECIOUS: Makefile
 
+
+check-local:
+	@set -e; \
+	  tmp=$$(mktemp -d "$${TMPDIR:-/tmp}/xplanet-catalog.XXXXXX"); \
+	  trap 'rm -rf -- "$$tmp"' EXIT; \
+	  trap 'exit 1' HUP INT TERM; \
+	  $(CC) $(CPPFLAGS) $(CFLAGS) -I"$(abs_srcdir)/src/libsgp4sdp4" \
+	    "$(abs_srcdir)/tests/tle_catalog.c" \
+	    "$(abs_builddir)/src/libsgp4sdp4/libsgp4sdp4.a" -lm -o "$$tmp/tle-catalog"; \
+	  "$$tmp/tle-catalog"
+	$(SHELL) "$(abs_srcdir)/tests/check-renderer.sh" "$(abs_builddir)/src/xplanet" "$(abs_srcdir)/xplanet"
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

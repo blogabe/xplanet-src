@@ -50,4 +50,15 @@ nobase_dist_data_DATA = \
 	xplanet/spice/voyager.krn	\
 	xplanet/stars/BSC
 
-EXTRA_DIST = xplanet.1 $(sources) LICENSE prepare-build.sh tests/README.md tests/tle_catalog.c
+EXTRA_DIST = xplanet.1 $(sources) LICENSE README.md prepare-build.sh tests/README.md tests/tle_catalog.c tests/check-renderer.sh
+
+check-local:
+	@set -e; \
+	  tmp=$$(mktemp -d "$${TMPDIR:-/tmp}/xplanet-catalog.XXXXXX"); \
+	  trap 'rm -rf -- "$$tmp"' EXIT; \
+	  trap 'exit 1' HUP INT TERM; \
+	  $(CC) $(CPPFLAGS) $(CFLAGS) -I"$(abs_srcdir)/src/libsgp4sdp4" \
+	    "$(abs_srcdir)/tests/tle_catalog.c" \
+	    "$(abs_builddir)/src/libsgp4sdp4/libsgp4sdp4.a" -lm -o "$$tmp/tle-catalog"; \
+	  "$$tmp/tle-catalog"
+	$(SHELL) "$(abs_srcdir)/tests/check-renderer.sh" "$(abs_builddir)/src/xplanet" "$(abs_srcdir)/xplanet"
