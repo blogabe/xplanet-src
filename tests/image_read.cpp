@@ -203,6 +203,17 @@ main()
 #endif
 #ifdef HAVE_LIBGIF
     roundTrip(input, output, "image.gif", 10);
+    // A small logical screen with a global palette but no image record.
+    const unsigned char no_frame[] = {
+        'G', 'I', 'F', '8', '9', 'a', 1, 0, 1, 0, 0x80, 0, 0,
+        0, 0, 0, 255, 255, 255, 0x3b
+    };
+    std::ofstream emptyGif("no-frame.gif", std::ios::binary);
+    emptyGif.write(reinterpret_cast<const char *>(no_frame), sizeof(no_frame));
+    emptyGif.close();
+    const unsigned char *lastGif = output.getRGBData();
+    require(emptyGif.good() && !output.Read("no-frame.gif")
+            && output.getRGBData() == lastGif, "GIF without a frame must not replace pixels");
 #endif
 #ifdef HAVE_LIBTIFF
     roundTrip(input, output, "image.tiff", 0);

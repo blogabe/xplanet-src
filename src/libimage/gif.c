@@ -63,22 +63,7 @@ read_gif(const char *filename, int *width, int *height, unsigned char **rgb)
     GifPixelType *row = NULL;
     int found_image = 0, ok = 0;
     if (!image_read_area(w, h, 3, "GIF", &area)) goto cleanup;
-    pixels = calloc(area, 3);
-    row = malloc((size_t) w * sizeof(*row));
-    if (pixels == NULL || row == NULL) goto cleanup;
-
     const ColorMapObject *global = gif->SColorMap;
-    if (global != NULL && global->Colors != NULL
-        && gif->SBackGroundColor >= 0 && gif->SBackGroundColor < global->ColorCount)
-    {
-        const GifColorType bg = global->Colors[gif->SBackGroundColor];
-        for (size_t i = 0; i < area; ++i)
-        {
-            pixels[3*i] = bg.Red;
-            pixels[3*i + 1] = bg.Green;
-            pixels[3*i + 2] = bg.Blue;
-        }
-    }
 
     GifRecordType record;
     do
@@ -96,6 +81,30 @@ read_gif(const char *filename, int *width, int *height, unsigned char **rgb)
             const ColorMapObject *map = frame->ColorMap != NULL ? frame->ColorMap : global;
             if (map == NULL || map->Colors == NULL || map->ColorCount <= 0)
                 goto cleanup;
+
+            /* Do not allocate a canvas based only on the logical screen
+             * header. First require an image descriptor that fits and has
+             * a usable palette. */
+            if (!found_image)
+            {
+                pixels = calloc(area, 3);
+                row = malloc((size_t) w * sizeof(*row));
+                if (pixels == NULL || row == NULL) goto cleanup;
+
+                const int bg_index = gif->SBackGroundColor;
+                if (global != NULL && global->Colors != NULL
+                    && bg_index >= 0 && bg_index < global->ColorCount
+                    && (frame->Width != w || frame->Height != h))
+                {
+                    const GifColorType bg = global->Colors[bg_index];
+                    for (size_t i = 0; i < area; ++i)
+                    {
+                        pixels[3*i] = bg.Red;
+                        pixels[3*i + 1] = bg.Green;
+                        pixels[3*i + 2] = bg.Blue;
+                    }
+                }
+            }
 
             const int offsets[] = { 0, 4, 2, 1 };
             const int jumps[] = { 8, 8, 4, 2 };
