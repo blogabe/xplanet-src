@@ -22,7 +22,7 @@ xplanet -version
 The fully qualified formula name selects this tap instead of Homebrew's core
 formula. The tap builds the renderer from a packaged source archive, so
 Subversion is not needed. It currently installs the maintained `1.3.1.225`
-build, not the `1.3.2` work in this repository.
+build, not the `1.4.0` work in this repository.
 
 ## Render an image
 
@@ -56,7 +56,17 @@ The old, unimplemented `-XYZ_file` option is not supported; use
 `-origin_file` for supported origin records. Corrected vector normalization
 can slightly change pixels in some planetary views.
 
-## Platform support in 1.3.2
+## What’s new in 1.4.0
+
+- Alpha-5 catalog IDs work in satellite element files.
+- Large maps are supported, and failed map reads or output writes preserve
+  the last good frame.
+- On macOS, the Aqua backend waits for Finder’s reply and explains what to
+  do if Automation access is denied.
+- Existing setups should review the output-path and missing-map behavior
+  above. X11 is no longer supported in this fork.
+
+## Platform support in 1.4.0
 
 - **macOS (Apple silicon):** Render to a file or use the Aqua backend for
   wallpaper. If macOS asks whether the app launching Xplanet can control
@@ -65,7 +75,7 @@ can slightly change pixels in some planetary views.
 - **Linux:** The supported mode is headless rendering to a file. Build with
   `--without-x` and render with `-output`. Use your desktop's own settings
   if you want to display the result as wallpaper.
-- **X11:** The legacy backend is end-of-life in this fork as of 1.3.2.
+- **X11:** The legacy backend is end-of-life in this fork as of 1.4.0.
   Its code and build options remain, but the backend is no longer tested,
   maintained or supported.
 
