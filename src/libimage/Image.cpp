@@ -262,6 +262,13 @@ void
 Image::getPixel(double x, double y, unsigned char *pixel, 
                 unsigned char *alpha)
 {
+    if (!std::isfinite(x) || !std::isfinite(y) || rgbData_ == NULL || area_ <= 0)
+    {
+        memset(pixel, 0, 3);
+        if (alpha != NULL) *alpha = 0;
+        return;
+    }
+
     if (x < -0.5) x = -0.5;
     if (x >= width_ - 0.5) x = width_ - 0.5;
 
@@ -291,29 +298,25 @@ Image::getPixel(double x, double y, unsigned char *pixel,
     weight[2] = 1 - t - u + weight[1];
     weight[3] = t - weight[1];
 
-    unsigned char *pixels[4];
-    pixels[0] = rgbData_ + 3 * (iy0 * width_ + ix0);
-    pixels[1] = rgbData_ + 3 * (iy0 * width_ + ix1);
-    pixels[2] = rgbData_ + 3 * (iy1 * width_ + ix0);
-    pixels[3] = rgbData_ + 3 * (iy1 * width_ + ix1);
-
-    memset(pixel, 0, 3);
-    for (int i = 0; i < 4; i++)
+    const int indices[] = { iy0 * width_ + ix0, iy0 * width_ + ix1,
+                            iy1 * width_ + ix0, iy1 * width_ + ix1 };
+    for (int j = 0; j < 3; ++j)
     {
-        for (int j = 0; j < 3; j++)
-            pixel[j] += (unsigned char) (weight[i] * pixels[i][j]);
+        double value = 0;
+        for (int i = 0; i < 4; ++i)
+            value += weight[i] * rgbData_[3 * indices[i] + j];
+        pixel[j] = static_cast<unsigned char>(floor(value + 0.5));
     }
 
     if (alpha != NULL)
     {
-        unsigned char pixels[4];
-        pixels[0] = pngAlpha_[iy0 * width_ + ix0];
-        pixels[1] = pngAlpha_[iy0 * width_ + ix1];
-        pixels[2] = pngAlpha_[iy0 * width_ + ix0];
-        pixels[3] = pngAlpha_[iy1 * width_ + ix1];
-
-        *alpha = 0;
-        for (int i = 0; i < 4; i++)
-            *alpha += (unsigned char) (weight[i] * pixels[i]);
+        double value = 255;
+        if (pngAlpha_ != NULL)
+        {
+            value = 0;
+            for (int i = 0; i < 4; ++i)
+                value += weight[i] * pngAlpha_[indices[i]];
+        }
+        *alpha = static_cast<unsigned char>(floor(value + 0.5));
     }
 }

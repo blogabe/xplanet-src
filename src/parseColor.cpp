@@ -34,7 +34,7 @@ buildColorMap()
         if (sscanf(line, "%d %d %d %[^\n]\n", &r, &g, &b, name) != 4) 
             continue;
 
-        if ((r < 0 || r > 255) || (g < 0 || g > 255) || (b < 0 || g > 255))
+        if ((r < 0 || r > 255) || (g < 0 || g > 255) || (b < 0 || b > 255))
             continue;
 
         // strip off DOS end-of-line

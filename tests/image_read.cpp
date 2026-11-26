@@ -159,5 +159,18 @@ main()
 #ifdef HAVE_LIBPNM
     roundTrip(input, output, "image.ppm", 0);
 #endif
-    std::cout << "Image read cases passed\n";
+    const unsigned char solid[] = { 200, 100, 50, 200, 100, 50,
+                                    200, 100, 50, 200, 100, 50 };
+    const unsigned char asym[] = { 0, 0, 100, 28 };
+    Image sample(2, 2, solid, asym);
+    unsigned char pixel[3], opacity;
+    sample.getPixel(0.5, 0.5, pixel, &opacity);
+    require(pixel[0] == 200 && pixel[1] == 100 && pixel[2] == 50 && opacity == 32,
+            "Interpolation changed a constant color or selected the wrong alpha");
+    sample.getPixel(0, 1, pixel, &opacity);
+    require(opacity == 100, "Interpolation changed a pixel-center alpha");
+    Image opaque(2, 2, solid, NULL);
+    opaque.getPixel(0.5, 0.5, pixel, &opacity);
+    require(opacity == 255, "Image without an alpha channel must sample as opaque");
+    std::cout << "Image read and sampling cases passed\n";
 }
