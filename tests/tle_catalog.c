@@ -18,7 +18,8 @@ static void set_id(char line[80], const char *id)
     line[68] = '0' + sum % 10;
 }
 
-static void check_id(const char *first, const char *second, int expected)
+static void check_record(const char *first, const char *second, int expected,
+                         const char *name, const char *display)
 {
     char lines[3][80] = {
         "Catalog fixture",
@@ -26,15 +27,22 @@ static void check_id(const char *first, const char *second, int expected)
         "2 25544  51.6297  78.4979 0006431 344.6528 119.5204 15.66405366292649",
     };
     tle_t sat = {0};
+    snprintf(lines[0], sizeof(lines[0]), "%s", name);
     set_id(lines[1], first);
     set_id(lines[2], second);
     int result = Get_Next_Tle_Set(lines, &sat);
-    if (expected > 0 ? result != 1 || sat.catnr != expected : result == 1)
+    if (expected > 0 ? result != 1 || sat.catnr != expected
+                     || strcmp(sat.sat_name, display) != 0 : result == 1)
     {
         fprintf(stderr, "Catalog case %.5s/%.5s: status %d, ID %d (expected %d)\n",
                 first, second, result, sat.catnr, expected);
         exit(EXIT_FAILURE);
     }
+}
+
+static void check_id(const char *first, const char *second, int expected)
+{
+    check_record(first, second, expected, "Catalog fixture", "Catalog fixture");
 }
 
 int main(void)
@@ -50,6 +58,9 @@ int main(void)
     check_id("I0057", "I0057", 0);
     check_id("O0057", "O0057", 0);
     check_id("A0057", "A0058", 0);
-    puts("TLE catalog ID cases passed");
+    check_record("25544", "25544", 25544, "Station   \r\n", "Station");
+    check_record("A0057", "A0057", 100057, "ABCDEFGHIJKLMNOPQRSTUVWXY",
+                 "ABCDEFGHIJKLMNOPQRSTUVWXY");
+    puts("TLE catalog ID and name cases passed");
     return EXIT_SUCCESS;
 }

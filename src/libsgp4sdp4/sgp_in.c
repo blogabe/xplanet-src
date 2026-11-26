@@ -189,24 +189,17 @@ Convert_Satellite_Data( char *tle_set, tle_t *tle )
 int
 Get_Next_Tle_Set( char line[3][80], tle_t *tle)
 {
-  int idx,  /* Index for loops and arrays    */
-      chr;  /* Used for inputting characters */
-
   char tle_set[139]; /* Two lines of a TLE set */
-
-  /* Read the satellite's name */
-  for (idx = 0 ; idx < 25; idx++)
+  size_t length = 0;
+  while (length + 1 < sizeof(tle->sat_name) &&
+         line[0][length] != CR && line[0][length] != LF &&
+         line[0][length] != '\0')
   {
-      if( ((chr = line[0][idx]) != CR) && (chr != LF) && (chr != '\0'))
-	  tle->sat_name[idx] = chr;
-      else
-      {
-	  /* strip off trailing spaces */
-	  while ((chr = line[0][--idx]) == ' ');
-	  tle->sat_name[++idx] = '\0';
-  	  break;
-      }
+    tle->sat_name[length] = line[0][length];
+    ++length;
   }
+  while (length > 0 && tle->sat_name[length - 1] == ' ') --length;
+  tle->sat_name[length] = '\0';
 
   /* Read in first line of TLE set */
   strncpy(tle_set, line[1], 70);
