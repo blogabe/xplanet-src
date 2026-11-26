@@ -3,7 +3,10 @@ Use fresh TLEs for current positions: https://celestrak.org/NORAD/elements/
 Keep your active TLEs and the matching marker definitions in a separate
 search directory. The renderer can resolve the bundled iss.png icon
 without copying it into that directory. Both five-digit and Alpha-5 TLE
-catalog IDs are supported.
+catalog IDs are supported. CelesTrak exhausted its five-digit catalog
+range on 2026-07-11 and does not offer TLEs for newly cataloged six-digit
+objects; find another source of Alpha-5 TLEs for those objects.
+https://celestrak.org/NORAD/archives/sup-request.php
 
 A sample TLE entry for the International Space Station looks like
 this:

@@ -53,7 +53,9 @@ and tries again next frame. Use `-transpng` for transparent PNG output.
 Unknown options return an error; `-help` lists the available options.
 The old, unimplemented `-XYZ_file` option is not supported; use
 `-origin_file` for supported origin records. Corrected vector normalization
-can slightly change pixels in some planetary views.
+can slightly change pixels in some planetary views. Corrected interpolation
+rounding also changes pixel values when relief, cloud or specular maps are
+resized to match the day map. These changes are intentional.
 
 ## Try another scene
 

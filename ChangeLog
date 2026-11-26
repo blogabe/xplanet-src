@@ -1,3 +1,21 @@
+Version 1.4.0 (unreleased)
+	* Add Alpha-5 catalog IDs for compatible satellite element files.
+
+	* On macOS, wait for Finder's reply before reporting wallpaper
+	  success and explain how to recover when Automation is denied.
+
+	* Fix map resizing and interpolation, retain large textures, and
+	  keep the last good frame on failed map reads or output writes.
+
+	* Harden option, configuration, annotation and orbit parsing.
+	  Recover on later records after skipping an overlong line.
+
+	* Reject output paths that are symlinks and report an unreadable
+	  explicitly configured day map instead of silently using a default.
+
+	* Add renderer regression tests and document optional globe and
+	  mission scenes. The legacy X11 backend is no longer supported.
+
 Version 1.3.1 (released 13 Mar 2016)
 	* Updates for new giflib
 	
