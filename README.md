@@ -76,6 +76,14 @@ to build the archive. When building from a Git checkout, run
 `./prepare-build.sh` from the source root before configuring. It adjusts
 generated-file timestamps without changing their contents.
 
+For maintainers changing `configure.ac`, M4 macros or `Makefile.am`, use
+GNU Autoconf 2.71 and Automake 1.16.5 in a clean checkout. Run
+`LC_ALL=C autoreconf -fiv` and review the generated changes alongside their
+inputs. Regenerate again to check that the output is stable. Build and test
+the resulting `make dist` archive without the generator tools on the build
+path. Do not hand-edit generated files. Replacing Autotools is a separate
+decision from building the current release.
+
 For a headless build on Debian, install `gcc`, `g++`, `make`, `pkgconf`,
 `libjpeg62-turbo-dev`, `libpng-dev` and `libfreetype-dev`. From the source
 directory, use:
