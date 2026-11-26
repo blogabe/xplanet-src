@@ -8,6 +8,7 @@ Run `make check` from the build directory. The native checks cover:
   PNG alpha and bit depth, grayscale JPEG, recoverable JPEG warnings, and
   rejection of truncated JPEGs and GIFs without a frame. Failed reads must
   leave the previous image intact.
+- Assignment separators are found only within the current line.
 - Legacy Rayleigh table loading, vector and orbit math, and trail arguments.
 
 With PNG and JPEG enabled, the CLI checks also render in an isolated temporary

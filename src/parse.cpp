@@ -4,6 +4,7 @@
 #include <string>
 using namespace std;
 
+#include "ParseToken.h"
 #include "keywords.h"
 #include "parseColor.h"
 #include "xpUtil.h"
@@ -21,12 +22,7 @@ isDelimiter(char c)
 bool
 isEndOfLine(char c)
 {
-    // 13 is DOS end-of-line, 28 is the file separator
-    bool returnValue = (c == '\0' || c == 13 || c == 28);
-
-    if (commentEndsLine) returnValue = (c == '#' || returnValue);
-
-    return(returnValue); 
+    return parseToken::isLineTerminator(c, commentEndsLine);
 }
 
 static void
@@ -97,12 +93,9 @@ getValueAfter(const char *line, int &i, const char *key, const char endChar,
     const size_t length = strlen(key);
     if (strncmp(line + i, key, length) != 0) return false;
 
-    int separator = i + length;
-    while (line[separator] != endChar)
-    {
-        if (isEndOfLine(line[separator])) return false;
-        ++separator;
-    }
+    const int separator = parseToken::findSeparator(
+        line, i + length, endChar, commentEndsLine);
+    if (separator < 0) return false;
 
     const int start = separator + 1;
     i = start;

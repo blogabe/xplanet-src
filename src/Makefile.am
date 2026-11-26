@@ -43,6 +43,7 @@ xplanet_SOURCES = \
 	getopt.h		\
 	getopt1.c		\
 	keywords.h		\
+	ParseToken.h		\
 	parse.h			\
 	parse.cpp  		\
 	parseColor.h		\

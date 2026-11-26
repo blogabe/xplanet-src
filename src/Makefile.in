@@ -109,8 +109,8 @@ am__xplanet_SOURCES_DIST = Map.cpp Map.h MapReduction.h OrbitMath.h \
 	buildPlanetMap.cpp createMap.h createMap.cpp \
 	drawMultipleBodies.cpp drawProjection.cpp findBodyXYZ.h \
 	findBodyXYZ.cpp findFile.h findFile.cpp getopt.c getopt.h \
-	getopt1.c keywords.h parse.h parse.cpp parseColor.h \
-	parseColor.cpp printVersion.cpp readConfig.cpp \
+	getopt1.c keywords.h ParseToken.h parse.h parse.cpp \
+	parseColor.h parseColor.cpp printVersion.cpp readConfig.cpp \
 	readOriginFile.h readOriginFile.cpp satrings.h ssec.cpp \
 	setPositions.h setPositions.cpp sphericalToPixel.h \
 	sphericalToPixel.cpp xpGetopt.h xpUtil.cpp xpUtil.h \
@@ -422,6 +422,7 @@ xplanet_SOURCES = \
 	getopt.h		\
 	getopt1.c		\
 	keywords.h		\
+	ParseToken.h		\
 	parse.h			\
 	parse.cpp  		\
 	parseColor.h		\
