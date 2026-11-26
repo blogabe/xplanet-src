@@ -16,7 +16,7 @@ using namespace std;
 #include <Carbon/Carbon.h>
 
 extern "C" {
-    bool SetDesktopPictureFromCharString(const char *file);
+    OSStatus SetDesktopPictureFromCharString(const char *file);
 }
 
 DisplayMacAqua::DisplayMacAqua(const int tr) : DisplayBase(tr)
@@ -104,22 +104,26 @@ DisplayMacAqua::renderImage(PlanetProperties *planetProperties[])
         xpMsg(msg.str(), __FILE__, __LINE__);
     }
 
-    // This sometimes doesn't set the background correctly, but
-    // doesn't return false in those cases.  Hopefully the real API to
-    // set the desktop will be available soon.
-    sleep(1);
-    if (!SetDesktopPictureFromCharString(outputStream.str().c_str()))
+    OSStatus status = SetDesktopPictureFromCharString(outputStream.str().c_str());
+    if (status != noErr)
     {
         ostringstream errStr;
-        errStr << "Failed to set desktop from " 
-               << outputStream.str() << "\n";
+        errStr << "Failed to set desktop (macOS error " << status
+               << "); image retained at " << outputStream.str() << "\n";
+        if (status == errAEEventNotPermitted)
+        {
+            errStr << "Finder Automation access was denied. In System Settings > "
+                   << "Privacy & Security > Automation, allow Xplanet or the app "
+                   << "that launched it to control Finder.\n"
+                   << "Recovery: https://github.com/blogabe/Xplanet/blob/main/"
+                   << "docs/management.md#finder-automation-permission\n";
+        }
         xpWarn(errStr.str(), __FILE__, __LINE__);
+        return;
     }
 
-    // I have no idea, but maybe the failure to set the desktop is
-    // because the Apple Event runs inside a thread or something.
-    // Sleep for a second before removing the temporary file to give
-    // it some time.
+    // Finder has acknowledged the request. Retain the existing grace period
+    // for the wallpaper display before removing the temporary image.
     sleep(1);
     if (!options->SaveDesktopFile())
         unlinkFile(outputStream.str().c_str());

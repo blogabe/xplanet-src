@@ -52,75 +52,89 @@
 #import <Cocoa/Cocoa.h>
 #include <Carbon/Carbon.h>
 
-// Setting the desktop picture involves a lot of Apple Event and Carbon code.
-// It's all self-contained in this one function.  This Apple Event isn't guarrenteed to
-// work forever, and real APIs to set the desktop picture should be coming down the road,
-// but in the meantime this is how you do it.
-static OSErr SetDesktopPicture(NSString *picturePath,SInt32 pIndex)
+// Keep the picture available until Finder has processed the request, including
+// any first-use macOS automation authorization.
+static OSStatus SetDesktopPicture(NSString *picturePath)
 {
-    AEDesc tAEDesc = {typeNull, nil}; // always init AEDescs
-    OSErr  anErr = noErr;
-    AliasHandle  aliasHandle=nil;
-    FSRef  pictRef;
-    OSStatus  status;
+    AEDesc pictureDesc = {typeNull, nil};
+    AppleEvent event = {typeNull, nil};
+    AppleEvent reply = {typeNull, nil};
+    AliasHandle aliasHandle = nil;
+    FSRef pictureRef;
+    OSStatus status = paramErr;
 
-// Someday pIndex will hopefully determine on which monitor to set the desktop picture.
-// This doesn't work in Mac OS X right now, so we don't do anything with the parameter.
-#pragma unused (pIndex)
+    if (picturePath != nil)
+        status = FSPathMakeRef([picturePath fileSystemRepresentation],
+                               &pictureRef, NULL);
 
-    // Let's make an FSRef from the NSString picture path that was passed in
-    status=FSPathMakeRef([picturePath fileSystemRepresentation],&pictRef,NULL);
+    if (status == noErr)
+        status = FSNewAlias(nil, &pictureRef, &aliasHandle);
+    if (status == noErr && aliasHandle == nil)
+        status = paramErr;
 
-    // Now we create an alias to the picture from that FSRef
-    if (status==noErr)
-    anErr = FSNewAlias( nil, &pictRef, &aliasHandle);
-    
-    if ( noErr == anErr  &&  aliasHandle == nil )
-        anErr = paramErr;
-    
-    // Now we create an AEDesc containing the alias to the picture
-    if ( noErr == anErr )
+    if (status == noErr)
     {
-        char handleState = HGetState( (Handle) aliasHandle );
-        HLock( (Handle) aliasHandle);
-        anErr = AECreateDesc( typeAlias, *aliasHandle, GetHandleSize((Handle) aliasHandle), &tAEDesc);
-        HSetState( (Handle) aliasHandle, handleState );
-        DisposeHandle( (Handle)aliasHandle );
+        char handleState = HGetState((Handle) aliasHandle);
+        HLock((Handle) aliasHandle);
+        status = AECreateDesc(typeAlias, *aliasHandle,
+                              GetHandleSize((Handle) aliasHandle), &pictureDesc);
+        HSetState((Handle) aliasHandle, handleState);
     }
-    if (noErr == anErr)
+    if (aliasHandle != nil)
+        DisposeHandle((Handle) aliasHandle);
+
+    if (status == noErr)
     {
-        // Now we need to build the actual Apple Event that we're going to send the Finder
-        AppleEvent tAppleEvent;
-        OSType sig = 'MACS'; // The app signature for the Finder
-        AEBuildError tAEBuildError;
-        anErr = AEBuildAppleEvent(kAECoreSuite,kAESetData,typeApplSignature,&sig,sizeof(OSType),
-                                  kAutoGenerateReturnID,kAnyTransactionID,&tAppleEvent,&tAEBuildError,
-                                  "'----':'obj '{want:type(prop),form:prop,seld:type('dpic'),from:'null'()},data:(@)",&tAEDesc);
-                                  
-        // Finally we can go ahead and send the Apple Event using AESend                          
-        if (noErr == anErr)
+        OSType signature = 'MACS';
+        AEBuildError buildError;
+        status = AEBuildAppleEvent(kAECoreSuite, kAESetData, typeApplSignature,
+                                  &signature, sizeof(signature),
+                                  kAutoGenerateReturnID, kAnyTransactionID,
+                                  &event, &buildError,
+                                  "'----':'obj '{want:type(prop),form:prop,seld:type('dpic'),from:'null'()},data:(@)",
+                                  &pictureDesc);
+    }
+    if (status == noErr)
+    {
+        // AppleEvent timeouts are in 1/60-second ticks. A timeout is not proof
+        // that Finder abandoned the request; the caller retains the image.
+        status = AESend(&event, &reply, kAEWaitReply, kAENormalPriority,
+                        120 * 60, nil, nil);
+        if (status == noErr)
         {
-            AppleEvent    theReply = {typeNull, nil};
-            anErr = AESend(&tAppleEvent,&theReply,kAENoReply,kAENormalPriority,kNoTimeOut,nil,nil);
-            AEDisposeDesc(&tAppleEvent);    // Always dispose ASAP
+            SInt32 finderError = noErr;
+            DescType actualType;
+            Size actualSize;
+            OSErr replyStatus = AEGetParamPtr(&reply, keyErrorNumber, typeSInt32,
+                                             &actualType, &finderError,
+                                             sizeof(finderError), &actualSize);
+            if (replyStatus == noErr)
+                status = (actualType == typeSInt32 &&
+                          actualSize == sizeof(finderError)) ? finderError : paramErr;
+            else if (replyStatus != errAEDescNotFound)
+                status = replyStatus;
         }
     }
-    return anErr;
+
+    AEDisposeDesc(&reply);
+    AEDisposeDesc(&event);
+    AEDisposeDesc(&pictureDesc);
+    return status;
 }
 
 /*
   This function written by Hari Nair (hari@alumni.caltech.edu) and
   distributed with Xplanet (http://xplanet.sourceforge.net)
  */
-bool SetDesktopPictureFromCharString(const char *file)
+OSStatus SetDesktopPictureFromCharString(const char *file)
 {
      NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
 
      NSString *filePath = [NSString stringWithUTF8String: file];
 
-     OSErr err = SetDesktopPicture(filePath, 0);
+     OSStatus err = SetDesktopPicture(filePath);
      
      [pool release];
 
-     return (err == noErr);
+     return err;
 }
