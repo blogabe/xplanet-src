@@ -50,7 +50,7 @@ decode_pnm(FILE *file, struct pnm_input *input, int *width, int *height)
     xelval maxval;
     pnm_readpnminit(file, &w, &h, &maxval, &format);
     size_t area;
-    if (!image_read_area(w, h, &area) || maxval == 0) return 0;
+    if (!image_read_area(w, h, 3, "PNM", &area) || maxval == 0) return 0;
 
     input->row = malloc((size_t) w * sizeof(*input->row));
     input->pixels = malloc(3 * area);

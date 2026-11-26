@@ -5,6 +5,7 @@
 
 #include "config.h"
 #include "libimage/Image.h"
+#include "libimage/ImageReadLimits.h"
 
 #ifdef HAVE_LIBPNG
 #include <png.h>
@@ -105,6 +106,11 @@ writeGrayJpegFixture()
 int
 main()
 {
+    size_t area = 0;
+    require(image_read_area(21600, 10800, 5, "PNG", &area)
+            && area == 233280000, "Global relief dimensions must fit");
+    require(!image_read_area(32768, 32768, 5, "PNG", &area),
+            "Large decoded rasters must still be bounded");
     unsigned char rgb[3 * 256], alpha[256];
     for (int i = 0; i < 256; ++i)
     {

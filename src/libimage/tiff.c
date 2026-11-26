@@ -38,7 +38,7 @@ read_tiff(const char *filename, int *width, int *height, unsigned char **rgb)
     int ok = 0;
     if (!TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &w)
         || !TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &h)
-        || !image_read_area(w, h, &area))
+        || !image_read_area(w, h, 7, "TIFF", &area))
         goto cleanup;
 
     raster = malloc(area * sizeof(*raster));

@@ -44,7 +44,7 @@ decode_png(FILE *file, png_structp png, png_infop info, struct png_input *input,
     const png_uint_32 w = png_get_image_width(png, info);
     const png_uint_32 h = png_get_image_height(png, info);
     size_t area;
-    if (!image_read_area(w, h, &area)) return 0;
+    if (!image_read_area(w, h, 5, "PNG", &area)) return 0;
 
     png_set_expand(png);
     png_set_strip_16(png);

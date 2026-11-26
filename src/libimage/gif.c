@@ -62,7 +62,7 @@ read_gif(const char *filename, int *width, int *height, unsigned char **rgb)
     unsigned char *pixels = NULL;
     GifPixelType *row = NULL;
     int found_image = 0, ok = 0;
-    if (!image_read_area(w, h, &area)) goto cleanup;
+    if (!image_read_area(w, h, 3, "GIF", &area)) goto cleanup;
     pixels = calloc(area, 3);
     row = malloc((size_t) w * sizeof(*row));
     if (pixels == NULL || row == NULL) goto cleanup;

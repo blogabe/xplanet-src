@@ -75,7 +75,7 @@ decode_jpeg(FILE *file, struct jpeg_input *input, int *width, int *height)
     size_t area;
     codec->out_color_space = JCS_RGB;
     jpeg_calc_output_dimensions(codec);
-    if (!image_read_area(codec->output_width, codec->output_height, &area))
+    if (!image_read_area(codec->output_width, codec->output_height, 3, "JPEG", &area))
         return 0;
     if (!jpeg_start_decompress(codec) || codec->output_components != 3)
         return 0;
