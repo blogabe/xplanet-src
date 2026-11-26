@@ -40,6 +40,10 @@ no bundled texture, supply your own map. See `man xplanet` for options and the
 bundled [configuration examples](xplanet/config/) for choosing maps, labels and
 overlays.
 
+If a write fails, Xplanet leaves the existing image intact. Use a writable
+directory and a regular output file name. The output path itself cannot
+be a symlink, directory or pipe.
+
 ## Platform support in 1.3.2
 
 - **macOS (Apple silicon):** Render to a file or use the Aqua backend for

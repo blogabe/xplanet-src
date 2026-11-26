@@ -80,32 +80,22 @@ read_tiff(const char *filename, int *width, int *height, unsigned char **rgb)
 }
 
 int
-write_tiff(const char *filename, int width, int height, unsigned char *rgb)
+write_tiff(FILE *file, int width, int height, unsigned char *rgb)
 {
-    unsigned char *raster;
-    int j;
-  
-    TIFF* tif = TIFFOpen(filename, "w");
+    /* Let the shared writer close the descriptor and check its status. */
+    TIFF *tif = TIFFFdOpen(fileno(file), "Xplanet output", "w");
+    if (tif == NULL) return 0;
 
-    if (tif == NULL) 
-    {
-        fprintf(stderr, "Can't create TIFF file\n");
-        return(0);
-    }
-
-    TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, 8);
-    TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, (uint32) width);
-    TIFFSetField(tif, TIFFTAG_IMAGELENGTH, (uint32) height);
-    TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
-    TIFFSetField(tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
-    TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tif, -1));
-    TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, 3);
-    for (j = 0; j < height; j++)
-    {
-        raster = rgb + (j * width * 3);
-        TIFFWriteScanline(tif, raster, j, 0);
-    }
-
-    TIFFClose(tif);
-    return(1);
+    int ok = TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, 8)
+        && TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, (uint32_t) width)
+        && TIFFSetField(tif, TIFFTAG_IMAGELENGTH, (uint32_t) height)
+        && TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB)
+        && TIFFSetField(tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG)
+        && TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, 3)
+        && TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tif, 0));
+    for (int j = 0; ok && j < height; ++j)
+        ok = TIFFWriteScanline(tif, rgb + j * width * 3, j, 0) == 1;
+    if (ok) ok = TIFFFlush(tif);
+    TIFFCleanup(tif);
+    return ok;
 }

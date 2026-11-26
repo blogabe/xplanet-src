@@ -622,7 +622,9 @@ Options::parseArgs(int argc, char **argv)
             // fall through to OUTPUT block
         case OUTPUT:
             outputBase_ = optarg;
-            if (outputBase_.find('.') == string::npos)
+            if (outputBase_.empty() || outputBase_[outputBase_.size() - 1] == '/')
+                xpExit("Expected an image filename for -output.\n", __FILE__, __LINE__);
+            if (outputBase_.find('.', outputBase_.rfind('/') + 1) == string::npos)
             {
                 outputExt_ = defaultMapExt;
             }
@@ -639,8 +641,10 @@ Options::parseArgs(int argc, char **argv)
         case OUTPUT_MAP_RECT:
         {
             string base = optarg;
+            if (base.empty() || base[base.size() - 1] == '/')
+                xpExit("Expected an image filename for -output_map.\n", __FILE__, __LINE__);
             string ext = defaultMapExt;
-            if (base.find('.') != string::npos)
+            if (base.find('.', base.rfind('/') + 1) != string::npos)
             {
                 ext.assign(base, base.rfind('.'), base.size());
                 base.assign(base, 0, base.rfind('.'));

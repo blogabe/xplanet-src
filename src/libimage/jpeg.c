@@ -18,6 +18,7 @@
 ****************************************************************************/
 
 #include <stdio.h>
+#include <setjmp.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -103,38 +104,60 @@ read_jpeg(const char *filename, int *width, int *height, unsigned char **rgb)
     return(1);
 }
 
+struct jpeg_write_error
+{
+    struct jpeg_error_mgr manager;
+    jmp_buf jump;
+};
+
+static void
+jpeg_write_failed(j_common_ptr cinfo)
+{
+    struct jpeg_write_error *error = (struct jpeg_write_error *) cinfo->err;
+    (*cinfo->err->output_message)(cinfo);
+    longjmp(error->jump, 1);
+}
+
 int
 write_jpeg(FILE *outfile, int width, int height, unsigned char *rgb,
            int quality)
 {
-    struct jpeg_compress_struct cinfo;
-    struct jpeg_error_mgr jerr;
-
+    struct jpeg_compress_struct *cinfo = calloc(1, sizeof(*cinfo));
+    struct jpeg_write_error error;
     JSAMPROW scanline[1];
 
-    cinfo.err = jpeg_std_error(&jerr);
-    jpeg_create_compress(&cinfo);
-    jpeg_stdio_dest(&cinfo, outfile);
-
-    cinfo.image_width = width; 
-    cinfo.image_height = height;
-    cinfo.input_components = 3;
-    cinfo.in_color_space = JCS_RGB;
-
-    jpeg_set_defaults(&cinfo);
-
-    jpeg_set_quality(&cinfo, quality, TRUE);
-
-    jpeg_start_compress(&cinfo, TRUE);
-
-    while (cinfo.next_scanline < (unsigned int) height) 
+    if (cinfo == NULL) return 0;
+    cinfo->err = jpeg_std_error(&error.manager);
+    error.manager.error_exit = jpeg_write_failed;
+    if (setjmp(error.jump))
     {
-        scanline[0] = rgb + 3 * width * cinfo.next_scanline;
-        jpeg_write_scanlines(&cinfo, scanline, 1);
+        jpeg_destroy_compress(cinfo);
+        free(cinfo);
+        return 0;
+    }
+    jpeg_create_compress(cinfo);
+    jpeg_stdio_dest(cinfo, outfile);
+
+    cinfo->image_width = width;
+    cinfo->image_height = height;
+    cinfo->input_components = 3;
+    cinfo->in_color_space = JCS_RGB;
+
+    jpeg_set_defaults(cinfo);
+
+    jpeg_set_quality(cinfo, quality, TRUE);
+
+    jpeg_start_compress(cinfo, TRUE);
+
+    while (cinfo->next_scanline < (unsigned int) height)
+    {
+        scanline[0] = rgb + 3 * width * cinfo->next_scanline;
+        jpeg_write_scanlines(cinfo, scanline, 1);
     }
 
-    jpeg_finish_compress(&cinfo);
-    jpeg_destroy_compress(&cinfo);
+    jpeg_finish_compress(cinfo);
+    jpeg_destroy_compress(cinfo);
+    free(cinfo);
 
     return(1);
 }

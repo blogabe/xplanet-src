@@ -175,76 +175,46 @@ int
 write_png(FILE *outfile, int width, int height, unsigned char *rgb,
           unsigned char *alpha)
 {
-    png_structp png_ptr;
-    png_infop info_ptr;
-    png_bytep row_ptr;
+    unsigned char *rgba = alpha == NULL ? NULL : malloc((size_t) width * 4);
+    if (alpha != NULL && rgba == NULL) return 0;
 
-    int i;
-
-    png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, 
-                                      (png_voidp) NULL, 
-                                      (png_error_ptr) NULL, 
-                                      (png_error_ptr) NULL);
-
-    if (!png_ptr) return(0);
-  
-    info_ptr = png_create_info_struct(png_ptr);
-    if (!info_ptr)
+    png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    png_infop info = png == NULL ? NULL : png_create_info_struct(png);
+    if (info == NULL)
     {
-        png_destroy_write_struct(&png_ptr, (png_infopp) NULL);
-        return(0);
-    }
-  
-    png_init_io(png_ptr, outfile);
-
-    if (alpha == NULL)
-    {
-        png_set_IHDR(png_ptr, info_ptr, width, height, 8, PNG_COLOR_TYPE_RGB,
-                     PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
-                     PNG_FILTER_TYPE_DEFAULT);
-        
-        png_write_info(png_ptr, info_ptr);
-        
-        for (i = 0; i < height; i++) 
-        {
-            row_ptr = rgb + 3 * i * width;
-            png_write_rows(png_ptr, &row_ptr, 1);
-        }
-    }
-    else
-    {
-        int irgb = 0;
-        int irgba = 0;
-
-        int area = width * height;
-        unsigned char *rgba = malloc(4 * area);
-
-        png_set_IHDR(png_ptr, info_ptr, width, height, 8, 
-                     PNG_COLOR_TYPE_RGB_ALPHA,
-                     PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
-                     PNG_FILTER_TYPE_DEFAULT);
-        
-        png_write_info(png_ptr, info_ptr);
-        
-        for (i = 0; i < area; i++)
-        {
-            rgba[irgba++] = rgb[irgb++];
-            rgba[irgba++] = rgb[irgb++];
-            rgba[irgba++] = rgb[irgb++];
-            rgba[irgba++] = alpha[i];
-        }
-        
-        for (i = 0; i < height; i++) 
-        {
-            row_ptr = rgba + 4 * i * width;
-            png_write_rows(png_ptr, &row_ptr, 1);
-        }
-
+        if (png != NULL) png_destroy_write_struct(&png, NULL);
         free(rgba);
+        return 0;
+    }
+    if (setjmp(png_jmpbuf(png)))
+    {
+        png_destroy_write_struct(&png, &info);
+        free(rgba);
+        return 0;
     }
 
-    png_write_end(png_ptr, info_ptr);
-    png_destroy_write_struct(&png_ptr, &info_ptr);
-
-    return(1);
+    png_init_io(png, outfile);
+    png_set_IHDR(png, info, width, height, 8,
+                 alpha == NULL ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGB_ALPHA,
+                 PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
+                 PNG_FILTER_TYPE_DEFAULT);
+    png_write_info(png, info);
+    for (int i = 0; i < height; ++i)
+    {
+        unsigned char *row = rgb + 3 * i * width;
+        if (alpha != NULL)
+        {
+            for (int j = 0; j < width; ++j)
+            {
+                memcpy(rgba + 4*j, row + 3*j, 3);
+                rgba[4*j + 3] = alpha[i * width + j];
+            }
+            row = rgba;
+        }
+        png_write_row(png, row);
+    }
+    png_write_end(png, info);
+    png_destroy_write_struct(&png, &info);
+    free(rgba);
+    return 1;
 }

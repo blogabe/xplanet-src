@@ -19,6 +19,8 @@
 ****************************************************************************/
 
 #include <stdio.h>
+#include <setjmp.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <pnm.h>
@@ -104,56 +106,33 @@ write_pnm(FILE *outfile, int width, int height, unsigned char *rgb,
           int maxv, int format, int forceplain)
 {
     xelval maxval = maxv;
-    xel **imagearray = pnm_allocarray(width, height);
-    int i, j, ipos;
-    xelval avg;
-
-    switch (format)
+    jmp_buf jump;
+    xel *row = calloc(width, sizeof(*row));
+    if (row == NULL) return 0;
+    if (setjmp(jump))
     {
-    case PBM_TYPE:
-        for (j = 0; j < height; j++)
-        { 
-            ipos = j * width;
-            for (i = 0; i < width; i++)
-            {
-                avg = (rgb[3 * (ipos + i)] + rgb[3 * (ipos + i) + 1] 
-                       + rgb[3 * (ipos + i) + 2]) / 3;
-                PNM_ASSIGN1(imagearray[j][i], (avg > 127 ? 1 : 0));
-            }
-        }
-        break;
-    case PGM_TYPE:
-        for (j = 0; j < height; j++)
-        { 
-            ipos = j * width;
-            for (i = 0; i < width; i++)
-            {
-                avg = (rgb[3 * (ipos + i)] + rgb[3 * (ipos + i) + 1] 
-                       + rgb[3 * (ipos + i) + 2]) / 3;
-                PNM_ASSIGN1(imagearray[j][i], avg);
-            }
-        }
-        break;
-    case PPM_TYPE:
-        for (j = 0; j < height; j++)
-        { 
-            ipos = j * width;
-            for (i = 0; i < width; i++)
-            {
-                PPM_ASSIGN(imagearray[j][i],
-                           (xelval) rgb[3 * (ipos + i)],
-                           (xelval) rgb[3 * (ipos + i) + 1],
-                           (xelval) rgb[3 * (ipos + i) + 2]);
-            }
-        }
-        break;
-    default:
-        fprintf(stderr, "Unknown pnm format\n");
+        pm_setjmpbuf(NULL);
+        free(row);
+        return 0;
     }
-
-    pnm_writepnm(outfile, imagearray, width, height, maxval, format, 
-                 forceplain);
-
-    pnm_freearray(imagearray, height);
-    return(1);
+    pm_setjmpbuf(&jump);
+    pnm_writepnminit(outfile, width, height, maxval, format, forceplain);
+    for (int i = 0; i < height; ++i)
+    {
+        for (int j = 0; j < width; ++j)
+        {
+            const unsigned char *pixel = rgb + 3 * (i * width + j);
+            const xelval avg = (pixel[0] + pixel[1] + pixel[2]) / 3;
+            if (format == PBM_TYPE)
+                PNM_ASSIGN1(row[j], avg > 127 ? 1 : 0);
+            else if (format == PGM_TYPE)
+                PNM_ASSIGN1(row[j], avg);
+            else
+                PNM_ASSIGN(row[j], pixel[0], pixel[1], pixel[2]);
+        }
+        pnm_writepnmrow(outfile, row, width, maxval, format, forceplain);
+    }
+    pm_setjmpbuf(NULL);
+    free(row);
+    return 1;
 }

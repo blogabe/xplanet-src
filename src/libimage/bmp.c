@@ -19,6 +19,7 @@
 ****************************************************************************/
 
 #include <stdio.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -51,17 +52,18 @@ read_bmp(const char *filename, int *width, int *height, unsigned char **rgb)
 }
 
 int 
-write_bmp(const char *filename, int width, int height, char *rgb)
+write_bmp(FILE *file, int width, int height, unsigned char *rgb)
 {
     int i, j, ipos;
     int bytesPerLine;
     unsigned char *line;
 
-    FILE *file;
     struct BMPHeader bmph;
 
-    /* The length of each line must be a multiple of 4 bytes */
-    bytesPerLine = (3 * (width + 1) / 4) * 4;
+    /* BMP stores each row padded to a multiple of four bytes. */
+    bytesPerLine = (3 * width + 3) & ~3;
+    if (bytesPerLine <= 0 || height > (INT_MAX - 54) / bytesPerLine)
+        return 0;
 
     /* copy only "BM" without a terminating null byte */
     strncpy(bmph.bfType, "BM", 2);
@@ -80,9 +82,6 @@ write_bmp(const char *filename, int width, int height, char *rgb)
     bmph.biClrUsed = 0;       
     bmph.biClrImportant = 0; 
 
-    file = fopen (filename, "wb");
-    if (file == NULL) return(0);
-  
     fwrite(&bmph.bfType, 2, 1, file);
     fwrite(&bmph.bfSize, 4, 1, file);
     fwrite(&bmph.bfReserved, 4, 1, file);
@@ -99,7 +98,7 @@ write_bmp(const char *filename, int width, int height, char *rgb)
     fwrite(&bmph.biClrUsed, 4, 1, file);
     fwrite(&bmph.biClrImportant, 4, 1, file);
   
-    line = malloc(bytesPerLine);
+    line = calloc(bytesPerLine, 1);
     if (line == NULL)
     {
         fprintf(stderr, "Can't allocate memory for BMP file.\n");
@@ -115,11 +114,13 @@ write_bmp(const char *filename, int width, int height, char *rgb)
             line[3*j+1] = rgb[ipos + 1];
             line[3*j+2] = rgb[ipos];
         }
-        fwrite(line, bytesPerLine, 1, file);
+        if (fwrite(line, bytesPerLine, 1, file) != 1)
+        {
+            free(line);
+            return 0;
+        }
     }
 
     free(line);
-    fclose(file);
-
-    return(1);
+    return !ferror(file);
 }

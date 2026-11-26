@@ -191,10 +191,7 @@ read_gif(const char *filename, int *width, int *height, unsigned char **rgb)
     return(1);
 }
 
-/* Make some variables global, so we could access them faster: */
-static int
-    ExpNumOfColors = 8,
-    ColorMapSize = 256;
+enum { ExpNumOfColors = 8 };
 
 /******************************************************************************
  * Code to quantize high resolution image into lower one. You may want to
@@ -505,109 +502,66 @@ static void QuitGifError(GifFileType *GifFile)
 #endif
 }
 
-int 
-write_gif(const char *filename, int width, int height, char *rgb)
+static int
+write_gif_bytes(GifFileType *gif, const GifByteType *bytes, int count)
 {
-    int i;
-    GifByteType *red, *green, *blue;
+    return (int) fwrite(bytes, 1, count, gif->UserData);
+}
 
-    GifByteType *OutputBuffer = NULL;
-    ColorMapObject *OutputColorMap = NULL;
+int
+write_gif(FILE *file, int width, int height, unsigned char *rgb)
+{
+    if (width > 65535 || height > 65535) return 0;
 
-    GifFileType *GifFile;
-    GifByteType *Ptr;
+    const int area = width * height;
+    int colors = 1 << ExpNumOfColors;
+#if GIFLIB_MAJOR >= 5
+    ColorMapObject *map = GifMakeMapObject(colors, NULL);
+#else
+    ColorMapObject *map = MakeMapObject(colors, NULL);
+#endif
+    GifByteType *indices = malloc(area);
+    GifByteType *planes = malloc(3 * area);
+    int ok = 0;
+    if (map == NULL || indices == NULL || planes == NULL) goto cleanup;
 
-    bool GifTestExistance = false;
-
-    ColorMapSize = 1 << ExpNumOfColors;
+    for (int i = 0; i < area; ++i)
+    {
+        planes[i] = rgb[3*i];
+        planes[area + i] = rgb[3*i + 1];
+        planes[2*area + i] = rgb[3*i + 2];
+    }
+    if (QuantizeBuffer(width, height, &colors, planes, planes + area,
+                       planes + 2*area, indices, map->Colors) == GIF_ERROR)
+        goto cleanup;
 
 #if GIFLIB_MAJOR >= 5
-    OutputColorMap = GifMakeMapObject(ColorMapSize, NULL);
+    GifFileType *gif = EGifOpen(file, write_gif_bytes, NULL);
 #else
-    OutputColorMap = MakeMapObject(ColorMapSize, NULL);
+    GifFileType *gif = EGifOpen(file, write_gif_bytes);
 #endif
-    
-    if (OutputColorMap == NULL ||
-	(OutputBuffer = (GifByteType *) malloc(width * height *
-					       sizeof(GifByteType))) == NULL)
-    {
-	fprintf(stderr,"Failed to allocate memory required, aborted.");
-	return(0);
-    }
+    if (gif == NULL) goto cleanup;
 
-    red = malloc(width * height * sizeof(GifByteType));
-    green = malloc(width * height * sizeof(GifByteType));
-    blue = malloc(width * height * sizeof(GifByteType));
-    if (red == NULL || green == NULL || blue == NULL)
-    {
-	fprintf(stderr, "Can't allocate memory for GIF file.\n");
-	return(0);
-    }
-    for (i = 0; i < width * height; i++)
-    {
-	red[i]   = (GifByteType) rgb[3*i  ];
-	green[i] = (GifByteType) rgb[3*i+1];
-	blue[i]  = (GifByteType) rgb[3*i+2];
-    }
-
-    if (QuantizeBuffer(width, height, &ColorMapSize,
-		       red, green, blue,
-		       OutputBuffer, OutputColorMap->Colors) == GIF_ERROR)
-
-    {
-	QuitGifError(NULL);
-	return(0);
-    }
-
-    free(red);
-    free(green);
-    free(blue);
-
-    Ptr = OutputBuffer;
+    ok = EGifPutScreenDesc(gif, width, height, ExpNumOfColors, 0, map) != GIF_ERROR
+        && EGifPutImageDesc(gif, 0, 0, width, height, false, NULL) != GIF_ERROR;
+    for (int i = 0; ok && i < height; ++i)
+        ok = EGifPutLine(gif, indices + i * width, width) != GIF_ERROR;
 
 #if GIFLIB_MAJOR >= 5
-    GifFile = EGifOpenFileName(filename, GifTestExistance, NULL);
+    if (EGifCloseFile(gif, NULL) == GIF_ERROR) ok = 0;
 #else
-    GifFile = EGifOpenFileName(filename, GifTestExistance);
+    if (EGifCloseFile(gif) == GIF_ERROR) ok = 0;
 #endif
-    /* Open stdout for the output file: */
-    if (GifFile == NULL)
+cleanup:
+    free(indices);
+    free(planes);
+    if (map != NULL)
     {
-	QuitGifError(GifFile);
-	return(0);
-    }
-
-    if (EGifPutScreenDesc(GifFile,
-			  width, height, ExpNumOfColors, 0,
-			  OutputColorMap) == GIF_ERROR ||
-	EGifPutImageDesc(GifFile,
-			 0, 0, width, height, false, NULL) == GIF_ERROR)
-
-    {
-	QuitGifError(GifFile);
-	return(0);
-    }
-
-    for (i = 0; i < height; i++) {
-	if (EGifPutLine(GifFile, Ptr, width) == GIF_ERROR)
-
-	{
-	    QuitGifError(GifFile);
-	    return(0);
-	}
-	Ptr += width;
-    }
-
 #if GIFLIB_MAJOR >= 5
-    if (EGifCloseFile(GifFile, NULL) == GIF_ERROR)
+        GifFreeMapObject(map);
 #else
-    if (EGifCloseFile(GifFile) == GIF_ERROR)
+        FreeMapObject(map);
 #endif
-
-    {
-	QuitGifError(GifFile);
-	return(0);
     }
-
-    return(1);
+    return ok;
 }
