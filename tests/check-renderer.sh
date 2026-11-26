@@ -190,4 +190,15 @@ printf '20261125.120000 10 20 30\n' > positioned.txt
 render -origin_file "$PWD/positioned.txt" -interpolate_origin_file \
     -num_times 1 -output origin-endpoint.png
 [ -s origin-endpoint.png ]
+printf '[earth]\nmagnify=not-a-number\nshade=bad\n' > numbers.conf
+render -config numbers.conf -num_times 1 -output numbers.png > numbers.log 2>&1
+grep -F 'numbers.conf:2: invalid magnify' numbers.log >/dev/null
+grep -F 'numbers.conf:3: invalid shade' numbers.log >/dev/null
 printf '%s\n' 'CLI, configuration and origin input checks passed'
+
+"$binary" --version > long-option.log
+grep -F 'TLE catalog IDs: Alpha-5' long-option.log >/dev/null
+render -verbo 0 -num_times 1 -output end-of-options.png --
+[ -s end-of-options.png ]
+if "$binary" -ver > ambiguous.log 2>&1; then exit 1; fi
+printf '%s\n' 'CLI option spelling and ordering passed'
