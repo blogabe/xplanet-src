@@ -56,7 +56,7 @@ if test "$with_freetype2" != 'no'; then
    if test "$PKG_CONFIG" = no; then
       AC_MSG_WARN(*** Xplanet will be built without freetype2 support ***)
    else
-      PKG_CHECK_MODULES([FREETYPE2], freetype2 >= 2.0.0, have_freetype2='yes', have_freetype2='no')
+      PKG_CHECK_MODULES([FREETYPE], freetype2 >= 2.0.0, have_freetype2='yes', have_freetype2='no')
       AC_SUBST(FREETYPE_CFLAGS)
       AC_SUBST(FREETYPE_LIBS)
       if test "$have_freetype2" = 'yes'; then

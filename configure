@@ -689,8 +689,6 @@ PANGOFT2_LIBS
 PANGOFT2_CFLAGS
 FREETYPE_LIBS
 FREETYPE_CFLAGS
-FREETYPE2_LIBS
-FREETYPE2_CFLAGS
 PKG_CONFIG
 XSS_LIBS
 X_EXTRA_LIBS
@@ -837,8 +835,8 @@ CCC
 XMKMF
 CPP
 PKG_CONFIG
-FREETYPE2_CFLAGS
-FREETYPE2_LIBS
+FREETYPE_CFLAGS
+FREETYPE_LIBS
 PANGOFT2_CFLAGS
 PANGOFT2_LIBS'
 
@@ -1512,10 +1510,10 @@ Some influential environment variables:
   XMKMF       Path to xmkmf, Makefile generator for X Window System
   CPP         C preprocessor
   PKG_CONFIG  path to pkg-config utility
-  FREETYPE2_CFLAGS
-              C compiler flags for FREETYPE2, overriding pkg-config
-  FREETYPE2_LIBS
-              linker flags for FREETYPE2, overriding pkg-config
+  FREETYPE_CFLAGS
+              C compiler flags for FREETYPE, overriding pkg-config
+  FREETYPE_LIBS
+              linker flags for FREETYPE, overriding pkg-config
   PANGOFT2_CFLAGS
               C compiler flags for PANGOFT2, overriding pkg-config
   PANGOFT2_LIBS
@@ -6776,12 +6774,12 @@ printf "%s\n" "$as_me: WARNING: *** Xplanet will be built without freetype2 supp
    else
 
 pkg_failed=no
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for FREETYPE2" >&5
-printf %s "checking for FREETYPE2... " >&6; }
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for FREETYPE" >&5
+printf %s "checking for FREETYPE... " >&6; }
 
 if test -n "$PKG_CONFIG"; then
-    if test -n "$FREETYPE2_CFLAGS"; then
-        pkg_cv_FREETYPE2_CFLAGS="$FREETYPE2_CFLAGS"
+    if test -n "$FREETYPE_CFLAGS"; then
+        pkg_cv_FREETYPE_CFLAGS="$FREETYPE_CFLAGS"
     else
         if test -n "$PKG_CONFIG" && \
     { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"freetype2 >= 2.0.0\""; } >&5
@@ -6789,7 +6787,7 @@ if test -n "$PKG_CONFIG"; then
   ac_status=$?
   printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_FREETYPE2_CFLAGS=`$PKG_CONFIG --cflags "freetype2 >= 2.0.0" 2>/dev/null`
+  pkg_cv_FREETYPE_CFLAGS=`$PKG_CONFIG --cflags "freetype2 >= 2.0.0" 2>/dev/null`
 else
   pkg_failed=yes
 fi
@@ -6798,8 +6796,8 @@ else
 	pkg_failed=untried
 fi
 if test -n "$PKG_CONFIG"; then
-    if test -n "$FREETYPE2_LIBS"; then
-        pkg_cv_FREETYPE2_LIBS="$FREETYPE2_LIBS"
+    if test -n "$FREETYPE_LIBS"; then
+        pkg_cv_FREETYPE_LIBS="$FREETYPE_LIBS"
     else
         if test -n "$PKG_CONFIG" && \
     { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"freetype2 >= 2.0.0\""; } >&5
@@ -6807,7 +6805,7 @@ if test -n "$PKG_CONFIG"; then
   ac_status=$?
   printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_FREETYPE2_LIBS=`$PKG_CONFIG --libs "freetype2 >= 2.0.0" 2>/dev/null`
+  pkg_cv_FREETYPE_LIBS=`$PKG_CONFIG --libs "freetype2 >= 2.0.0" 2>/dev/null`
 else
   pkg_failed=yes
 fi
@@ -6826,12 +6824,12 @@ else
         _pkg_short_errors_supported=no
 fi
         if test $_pkg_short_errors_supported = yes; then
-	        FREETYPE2_PKG_ERRORS=`$PKG_CONFIG --short-errors --errors-to-stdout --print-errors "freetype2 >= 2.0.0"`
+	        FREETYPE_PKG_ERRORS=`$PKG_CONFIG --short-errors --errors-to-stdout --print-errors "freetype2 >= 2.0.0"`
         else
-	        FREETYPE2_PKG_ERRORS=`$PKG_CONFIG --errors-to-stdout --print-errors "freetype2 >= 2.0.0"`
+	        FREETYPE_PKG_ERRORS=`$PKG_CONFIG --errors-to-stdout --print-errors "freetype2 >= 2.0.0"`
         fi
 	# Put the nasty error message in config.log where it belongs
-	echo "$FREETYPE2_PKG_ERRORS" >&5
+	echo "$FREETYPE_PKG_ERRORS" >&5
 
 	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
@@ -6839,8 +6837,8 @@ printf "%s\n" "no" >&6; }
 elif test $pkg_failed = untried; then
 	have_freetype2='no'
 else
-	FREETYPE2_CFLAGS=$pkg_cv_FREETYPE2_CFLAGS
-	FREETYPE2_LIBS=$pkg_cv_FREETYPE2_LIBS
+	FREETYPE_CFLAGS=$pkg_cv_FREETYPE_CFLAGS
+	FREETYPE_LIBS=$pkg_cv_FREETYPE_LIBS
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
 	have_freetype2='yes'
