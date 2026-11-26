@@ -129,7 +129,7 @@ main(int argc, char **argv)
     vector<LBRPoint> originVector;
     if (origin_file) 
     {
-        readOriginFile(options->OriginFile(), originVector);
+        readOriginFile(options->OriginFile(), originVector, options->InterpolateOriginFile());
         if (!options->InterpolateOriginFile())
             options->NumTimes(originVector.size());
     }

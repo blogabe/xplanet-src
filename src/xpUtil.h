@@ -35,6 +35,8 @@ extern double normalize(double a[3]);
 
 extern void invertMatrix(const double in[3][3], double out[3][3]);
 
+extern bool parseRenderDate(const std::string &date, double &julianDay);
+
 extern double toJulian(time_t tv_sec);
 extern time_t get_tv_sec(double jd);
 

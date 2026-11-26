@@ -34,8 +34,9 @@ xplanet -target earth -projection rectangular -geometry 1200x600 \
 ```
 
 This writes `earth.png` in the current directory using the bundled Earth map.
-Add `-date 20261125.120000` to render a fixed time (November 25, 2026 at noon UTC),
-or switch to `-projection orthographic` to see Earth as a globe. For bodies with
+Add `-date 20261125.120000` to render at noon UTC on November 25, 2026. A date
+without a time means midnight UTC. Use `-projection orthographic` to see Earth
+as a globe. For bodies with
 no bundled texture, supply your own map. See `man xplanet` for options and the
 bundled [configuration examples](xplanet/config/) for choosing maps, labels and
 overlays.
@@ -47,7 +48,8 @@ For input images, the renderer accepts up to 64 Mi pixels (67,108,864 pixels),
 with neither side greater than 21,600 pixels. Convert CMYK JPEGs to RGB before
 using them as maps. If an explicitly configured day map cannot be read, a
 finite render exits with an error. A running refresh keeps the last image
-and tries again next frame.
+and tries again next frame. Use `-transpng` for transparent PNG output.
+Unknown options return an error; `-help` lists the available options.
 
 ## Platform support in 1.3.2
 

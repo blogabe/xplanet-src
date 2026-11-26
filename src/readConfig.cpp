@@ -1,4 +1,6 @@
 #include <clocale>
+#include <cmath>
+#include <limits>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -258,9 +260,11 @@ readConfig(const char *line, PlanetProperties *planetProperties[])
         {
             checkLocale(LC_NUMERIC, "C");
             double value;
-            sscanf(returnString, "%lf", &value);
-            if (value < 0) value = 1;
-            currentProperties->Magnify(value);
+            if (sscanf(returnString, "%lf", &value) == 1 && std::isfinite(value) && value > 0)
+                currentProperties->Magnify(value);
+            else
+                xpWarn("Invalid magnify value; expected a positive number.\n",
+                       __FILE__, __LINE__);
             checkLocale(LC_NUMERIC, "");
         }
         break;
@@ -549,9 +553,25 @@ readConfigFile(string configFile, PlanetProperties *planetProperties[])
         currentProperties = defaultProperties;
 
         ifstream inFile(configFile.c_str());
-        char *line = new char[256];
-        while (inFile.getline(line, 256, '\n'))
-            readConfig(line, planetProperties);
+        char line[4096];
+        size_t lineNumber = 0;
+        for (;;)
+        {
+            ++lineNumber;
+            if (inFile.getline(line, sizeof(line)))
+                readConfig(line, planetProperties);
+            else if (inFile.eof() || inFile.bad() || inFile.gcount() == 0)
+                break;
+            else
+            {
+                inFile.clear();
+                inFile.ignore(numeric_limits<streamsize>::max(), '\n');
+                ostringstream message;
+                message << configFile << ':' << lineNumber
+                        << ": ignoring an overlong configuration line\n";
+                xpWarn(message.str(), __FILE__, __LINE__);
+            }
+        }
         
         // This condition will only be true if [default] is the only
         // section in the config file.  In this case, set all planet
@@ -565,7 +585,6 @@ readConfigFile(string configFile, PlanetProperties *planetProperties[])
         }
 
         inFile.close();
-        delete [] line;
 
         delete defaultProperties;
     }

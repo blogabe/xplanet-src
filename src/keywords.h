@@ -27,7 +27,7 @@ enum keyWords
     VERBOSITY, VERSIONNUMBER, VROOT, 
     WAIT, WINDOW, WINDOWTITLE, 
     XWINID, XYZ, XYZFILE, 
-    LAST_WORD
+    HELP, LAST_WORD
 };
 
 const char * const keyWordString[LAST_WORD] =
@@ -55,7 +55,7 @@ const char * const keyWordString[LAST_WORD] =
     "UTCLABEL", 
     "VERBOSITY", "VERSIONNUMBER", "VROOT", 
     "WAIT", "WINDOW", "WINDOWTITLE", 
-    "XWINID", "XYZ", "XYZFILE",
+    "XWINID", "XYZ", "XYZFILE", "HELP",
     "LAST_WORD"
 };
 

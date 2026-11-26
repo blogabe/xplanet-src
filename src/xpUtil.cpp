@@ -335,6 +335,32 @@ get_tv_sec(double jd)
     return(returnval);
 }
 
+bool
+parseRenderDate(const string &date, double &julianDay)
+{
+    const size_t dot = date.find('.');
+    const size_t end = dot == string::npos ? date.size() : dot;
+    const size_t first = !date.empty() && date[0] == '-' ? 1 : 0;
+    if (end != first + 8) return false;
+    if (dot != string::npos && (date.size() == dot + 1 || date.size() - dot - 1 > 6))
+        return false;
+    for (size_t i = first; i < date.size(); ++i)
+        if (i != dot && (date[i] < '0' || date[i] > '9')) return false;
+    const int year = atoi(date.substr(0, first + 4).c_str());
+    const int month = atoi(date.substr(first + 4, 2).c_str());
+    const int day = atoi(date.substr(first + 6, 2).c_str());
+    const int time = dot == string::npos ? 0 : atoi(date.c_str() + dot + 1);
+    const int hour = time / 10000, minute = time / 100 % 100, second = time % 100;
+    if (month < 1 || month > 12 || hour > 23 || minute > 59 || second > 59)
+        return false;
+    const int days[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+    const bool leap = year % 4 == 0 &&
+        (year < 1582 || year % 100 != 0 || year % 400 == 0);
+    if (day < 1 || day > days[month - 1] + (month == 2 && leap)) return false;
+    julianDay = toJulian(year, month, day, hour, minute, second);
+    return true;
+}
+
 double 
 toJulian(int year, int month, int day, int hour, int min, int sec)
 {

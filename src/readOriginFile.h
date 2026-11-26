@@ -14,14 +14,14 @@ struct LBRPoint
 };
 
 extern void
-readOriginFile(std::string filename, std::vector<LBRPoint> &originMap);
+readOriginFile(std::string filename, std::vector<LBRPoint> &originMap, bool interpolate);
 
 extern void
-readDynamicOrigin(string filename, LBRPoint &originPoint);
+readDynamicOrigin(std::string filename, LBRPoint &originPoint);
 
-extern void interpolateOriginFile(const double julianDay, 
-                                  const vector<LBRPoint> &originVector, 
-                                  double &rad, 
-                                  double &lat, double &lon, 
+extern void interpolateOriginFile(const double julianDay,
+                                  const std::vector<LBRPoint> &originVector,
+                                  double &rad,
+                                  double &lat, double &lon,
                                   double &localTime);
 #endif

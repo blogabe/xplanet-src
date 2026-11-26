@@ -159,3 +159,35 @@ TZ=Pacific/Honolulu render -label -utclabel -date_format '%Y %Z' \
 printf '%s\n' Pacific/Honolulu Pacific/Honolulu > expected-tz
 cmp expected-tz tz.log
 printf '%s\n' 'Label timezone restoration passed'
+
+"$binary" -help > help.log
+grep -F 'Valid options' help.log >/dev/null
+for flag in -not-a-real-xplanet-option -XYZ_file; do
+    if "$binary" "$flag" unused > cli-error.log 2>&1; then exit 1; fi
+done
+if render -date 20260230 -num_times 1 -output invalid-date.png > cli-error.log 2>&1; then exit 1; fi
+[ ! -e invalid-date.png ]
+render -date 20261125 -num_times 1 -output .midnight
+render -date 20261125.000000 -num_times 1 -output explicit-midnight.jpg
+cmp .midnight.jpg explicit-midnight.jpg
+render -num_times 1 -transpng transparent
+[ "$(od -An -tx1 -j25 -N1 transparent.png | tr -d '[:space:]')" = 06 ]
+if render -num_times 1 -transpng wrong.jpg > cli-error.log 2>&1; then exit 1; fi
+[ ! -e wrong.jpg ]
+
+printf '#%4100s\n[earth]\nmap=absent-after-long-line.jpg\n' ' ' > long.conf
+if render -config long.conf -num_times 1 -output long.png > long.log 2>&1; then exit 1; fi
+grep -F 'ignoring an overlong configuration line' long.log >/dev/null
+grep -F 'absent-after-long-line.jpg' long.log >/dev/null
+
+printf '  # position not needed in a timed sequence\n\n20261125.120000\n' > dates.txt
+render -origin_file "$PWD/dates.txt" -num_times 1 -output origin-date.png
+[ "$(od -An -tx1 -N8 origin-date.png | tr -d '[:space:]')" = 89504e470d0a1a0a ]
+printf '  # no records\n\n' > empty-origin.txt
+if render -origin_file "$PWD/empty-origin.txt" -output no-origin.png > origin-error.log 2>&1; then exit 1; fi
+grep -F 'No usable records' origin-error.log >/dev/null
+printf '20261125.120000 10 20 30\n' > positioned.txt
+render -origin_file "$PWD/positioned.txt" -interpolate_origin_file \
+    -num_times 1 -output origin-endpoint.png
+[ -s origin-endpoint.png ]
+printf '%s\n' 'CLI, configuration and origin input checks passed'
