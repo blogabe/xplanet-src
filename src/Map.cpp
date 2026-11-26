@@ -6,6 +6,7 @@
 using namespace std;
 
 #include "Map.h"
+#include "MapReduction.h"
 #include "Options.h"
 #include "PlanetProperties.h"
 #include "Ring.h"
@@ -729,68 +730,23 @@ Map::OverlapEllipse(const double elong, const double sunRadius,
 void
 Map::Reduce(const int factor)
 {
-    if (factor < 1) return;
+    int w, h;
+    unsigned char *reduced = reduceMapRGB(mapData_, width_, height_, factor, w, h);
+    if (reduced == NULL) return;
 
-    Options *options = Options::getInstance();
-    if (options->Verbosity() > 1)
+    if (Options::getInstance()->Verbosity() > 1)
     {
         ostringstream msg;
-        msg << "Shrinking map by 2^" << factor << "\n";;
+        msg << "Shrinking map from " << width_ << "x" << height_
+            << " to " << w << "x" << h << "\n";
         xpMsg(msg.str(), __FILE__, __LINE__);
     }
 
-    int scale = 1;
-    for (int i = 0; i < factor; i++) scale *= 2;
-
-    int w = width_ / scale;
-    int h = height_ / scale;
-
-    int min_width = 16;
-
-    if (w < min_width) 
-    {
-        w = min_width;
-        h = min_width/2;
-        scale = width_/w;
-    }
-
-    const double scale2 = scale*scale;
-
-    const int new_area = w * h;
-
-    unsigned char *new_data = new unsigned char [3 * new_area];
-    memset(new_data, 0, 3 * new_area);
-
-    double *average = new double [3 * new_area];
-    for (int i = 0; i < 3*new_area; i++) average[i] = 0;
-
-    int ipos = 0;
-    for (int j = 0; j < height_; j++)
-    {
-        const int js = j / scale;
-        for (int i = 0; i < width_; i++)
-        {
-            const int is = i/scale;
-            for (int k = 0; k < 3; k++)
-                average[3*(js*w+is)+k] += (double) (mapData_[3*ipos+k]);
-
-            ipos++;
-        }
-    }
-
-    for (int i = 0; i < 3*new_area; i++)
-        new_data[i] = (unsigned char) (average[i]/scale2);
-
-    delete [] average;
     delete [] mapData_;
-
-    mapData_ = new_data;
-
+    mapData_ = reduced;
     width_ = w;
     height_ = h;
-
     area_ = w * h;
-
     SetUpMap();
 }
 

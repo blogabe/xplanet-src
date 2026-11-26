@@ -102,7 +102,8 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am__xplanet_SOURCES_DIST = Map.cpp Map.h Options.cpp Options.h \
+am__xplanet_SOURCES_DIST = Map.cpp Map.h MapReduction.h Options.cpp \
+	Options.h \
 	PlanetProperties.h PlanetProperties.cpp Ring.cpp Ring.h \
 	Satellite.h Satellite.cpp Separation.h Separation.cpp View.cpp \
 	View.h body.h buildPlanetMap.h buildPlanetMap.cpp createMap.h \
@@ -394,6 +395,7 @@ AM_LDFLAGS = @xplanet_LDFLAGS@
 xplanet_SOURCES = \
 	Map.cpp			\
 	Map.h			\
+	MapReduction.h		\
 	Options.cpp		\
 	Options.h		\
 	PlanetProperties.h	\

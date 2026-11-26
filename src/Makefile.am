@@ -14,6 +14,7 @@ AM_LDFLAGS = @xplanet_LDFLAGS@
 xplanet_SOURCES = \
 	Map.cpp			\
 	Map.h			\
+	MapReduction.h		\
 	Options.cpp		\
 	Options.h		\
 	PlanetProperties.h	\

@@ -1,5 +1,6 @@
 #include <cmath>
 #include <cstring>
+#include <limits>
 #include <map>
 #include <sstream>
 #include <string>
@@ -157,22 +158,19 @@ createMap(const double sLat, const double sLon,
         delete cloud;
         delete specular;
 
-        // If the map dimensions are each a power of two, the map size
-        // will be reduced to get rid of high-frequency noise
-        const double log2 = log(2.0);
-        double e = log((double) imageWidth) / log2;
-        double remainder = fabs(e - floor(e+0.5));
-        if (remainder < 1e-3)
+        // Retain the existing policy of automatically reducing only maps
+        // with power-of-two dimensions. Count power-of-two steps without
+        // converting an unbounded logarithm to an integer.
+        if (imageWidth > 0 && (imageWidth & (imageWidth - 1)) == 0
+            && imageHeight > 0 && (imageHeight & (imageHeight - 1)) == 0
+            && pR > 0)
         {
-            e = log((double) imageHeight) / log2;
-            remainder = fabs(e - floor(e+0.5));
-            if (remainder < 1e-3) 
-            {
-                // optimal size for image is about 4*pR x 2*pR
-                const double ratio = day->Height()/pR;
-                const int factor = (int) (log(ratio)/log2) - 1;
-                m->Reduce(factor);
-            }
+            int factor = 0;
+            for (double ratio = imageHeight / pR;
+                 ratio >= 4 && factor < numeric_limits<int>::digits;
+                 ratio *= 0.5)
+                ++factor;
+            m->Reduce(factor);
         }
     }
 
