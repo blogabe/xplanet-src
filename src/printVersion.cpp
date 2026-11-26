@@ -18,10 +18,9 @@ void
 printVersion()
 {
     cout << "Xplanet " << VERSION << endl;
-    cout << "Copyright (C) 2012 "
+    cout << "Original Xplanet copyright (C) 2012 "
          << "Hari Nair <hari@alumni.caltech.edu>" << endl;
-    cout << "The latest version can be found at "
-         << "http://xplanet.sourceforge.net\n";
+    cout << "Original project: https://xplanet.sourceforge.net\n";
     cout << "Compiled with support for:\n";
 #ifdef HAVE_AQUA
     cout << "\tMac OS X\n";
