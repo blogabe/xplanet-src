@@ -7625,6 +7625,16 @@ printf "%s\n" "$as_me: WARNING: *** Xplanet will be built without SPICE support 
 fi
 
 
+if test "$with_pnm" = yes && test "$have_pnm" != yes; then
+  as_fn_error $? "--with-pnm requested but Netpbm headers and library were not found" "$LINENO" 5
+fi
+if test "$with_pango" = yes && test "$have_pangoft2" != yes; then
+  as_fn_error $? "--with-pango requested but PangoFT2 was not found through pkg-config" "$LINENO" 5
+fi
+if test "$with_cspice" = yes && test "$have_cspice" != yes; then
+  as_fn_error $? "--with-cspice requested but CSPICE headers and library were not found" "$LINENO" 5
+fi
+
 if test "$have_aqua" = no; then
 
       if test "X$prefix" = "XNONE"; then
