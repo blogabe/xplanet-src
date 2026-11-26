@@ -33,13 +33,13 @@ extern void
 drawMultipleBodies(DisplayBase *display, Planet *target,
                    const double upX, const double upY, const double upZ, 
                    map<double, Planet *> &planetsFromSunMap,
-                   PlanetProperties *planetProperties[]);
+                   PlanetProperties *planetProperties[], string &unreadableMap);
 
 extern void
 drawProjection(DisplayBase *display, Planet *target,
                const double upX, const double upY, const double upZ, 
                map<double, Planet *> &planetsFromSunMap,
-               PlanetProperties *planetProperties);
+               PlanetProperties *planetProperties, string &unreadableMap);
 
 extern void
 readConfigFile(string configFile, PlanetProperties *planetProperties[]);
@@ -141,6 +141,7 @@ main(int argc, char **argv)
                             options->IdleWait());
 
     int times_run = 0;
+    int result = EXIT_SUCCESS;
 
     while (1)
     {
@@ -204,30 +205,42 @@ main(int argc, char **argv)
 
         // Initialize display device
         DisplayBase *display = getDisplay(times_run);
+        string unreadableMap;
 
         if (options->ProjectionMode() == MULTIPLE)
         {
             drawMultipleBodies(display, target, 
                                upX, upY, upZ, 
                                planetsFromSunMap,
-                               planetProperties);
+                               planetProperties, unreadableMap);
         }
         else
         {
             drawProjection(display, target, 
                            upX, upY, upZ, 
                            planetsFromSunMap,
-                           planetProperties[target->Index()]);
+                           planetProperties[target->Index()], unreadableMap);
         }
 
-        display->renderImage(planetProperties);
+        if (unreadableMap.empty()) display->renderImage(planetProperties);
         delete display;
 
         destroyPlanetMap();
 
-        times_run++;
+        if (!unreadableMap.empty())
+        {
+            xpWarn("Cannot read map " + unreadableMap + "; frame not published.\n",
+                   __FILE__, __LINE__);
+            if (options->NumTimes() > 0 || origin_file)
+            {
+                result = EXIT_FAILURE;
+                break;
+            }
+        }
+        else
+            ++times_run;
 
-        if (!options->PostCommand().empty())
+        if (unreadableMap.empty() && !options->PostCommand().empty())
         {
             if (system(options->PostCommand().c_str()) != 0)
             {
@@ -272,5 +285,5 @@ main(int argc, char **argv)
 
     cleanUpEphemeris();
 
-    return(EXIT_SUCCESS);
+    return result;
 }

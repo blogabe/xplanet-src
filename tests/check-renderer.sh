@@ -4,7 +4,9 @@ set -eu
 binary=$1
 assets=$2
 scratch=$(mktemp -d "${TMPDIR:-/tmp}/xplanet-check.XXXXXX")
-trap 'rm -rf -- "$scratch"' EXIT
+live_pid=
+trap 'if [ -n "$live_pid" ]; then kill "$live_pid" 2>/dev/null || :; wait "$live_pid" 2>/dev/null || :; fi
+      rm -rf -- "$scratch"' EXIT
 trap 'exit 1' HUP INT TERM
 mkdir "$scratch/home" "$scratch/work"
 HOME="$scratch/home"
@@ -115,3 +117,38 @@ for ext in $formats; do
     assert_no_temp
 done
 printf '%s\n' "Output preservation passed ($formats)"
+
+# A missing explicitly configured input must not replace a published frame.
+printf '[earth]\nmap=%s/working-map.jpg\n' "$PWD" > refresh.conf
+cp last-good.png finite.png
+if render -config refresh.conf -num_times 1 -output finite.png > finite.log 2>&1; then
+    printf '%s\n' 'A finite render unexpectedly succeeded without its map' >&2
+    exit 1
+fi
+grep -F 'frame not published' finite.log >/dev/null
+cmp last-good.png finite.png
+
+printf 'previous frame\n' > live.png
+cp live.png old-frame
+"$binary" -searchdir "$assets" -target earth -projection rectangular \
+    -date 20261125.120000 -geometry 320x160 -config refresh.conf \
+    -wait 1 -output live.png > live.log 2>&1 &
+live_pid=$!
+for attempt in 1 2 3 4 5 6; do
+    if grep -F 'frame not published' live.log >/dev/null; then break; fi
+    kill -0 "$live_pid"
+    sleep 1
+done
+grep -F 'frame not published' live.log >/dev/null
+cmp old-frame live.png
+ln -s "$assets/images/earth.jpg" working-map.jpg
+for attempt in 1 2 3 4 5 6; do
+    if ! cmp -s old-frame live.png; then break; fi
+    kill -0 "$live_pid"
+    sleep 1
+done
+[ "$(od -An -tx1 -N8 live.png | tr -d '[:space:]')" = 89504e470d0a1a0a ]
+kill "$live_pid"
+wait "$live_pid" 2>/dev/null || :
+live_pid=
+printf '%s\n' 'Required map failure and refresh recovery passed'

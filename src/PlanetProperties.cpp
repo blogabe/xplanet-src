@@ -19,6 +19,7 @@ PlanetProperties::PlanetProperties(const body index)
       cloudGamma_(1),
       cloudMap_(""), 
       cloudThreshold_(90), 
+      dayMapExplicit_(false),
       delOrbit_(2),
       drawOrbit_(false),
       grid_(false), 

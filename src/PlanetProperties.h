@@ -42,8 +42,9 @@ class PlanetProperties
     const unsigned char * Color() const { return(color_); };
     void Color(unsigned char color[3]) { memcpy(color_, color, 3); };
 
-    void DayMap(const std::string &dayMap) { dayMap_ = dayMap; };
+    void DayMap(const std::string &dayMap) { dayMap_ = dayMap; dayMapExplicit_ = true; };
     const std::string & DayMap() const           { return(dayMap_); };
+    bool DayMapExplicit() const { return dayMapExplicit_; };
 
     void Grid(const bool g) { grid_ = g; };
     bool Grid() const { return(grid_); };
@@ -171,6 +172,7 @@ class PlanetProperties
     unsigned char color_[3];
 
     std::string dayMap_;
+    bool dayMapExplicit_;
 
     double delOrbit_;
     bool drawOrbit_;

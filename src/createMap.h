@@ -2,6 +2,7 @@
 #define CREATEMAP_H
 
 #include <map>
+#include <string>
 
 class Map;
 class Planet;
@@ -14,6 +15,6 @@ createMap(const double sLat, const double sLon,
 	  const int width, const int height, 
 	  const double pR, Planet *p, Ring *r, 
 	  std::map<double, Planet *> &planetsFromSunMap,
-	  PlanetProperties *planetProperties);
+	  PlanetProperties *planetProperties, std::string &unreadableMap);
 
 #endif

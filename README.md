@@ -45,7 +45,9 @@ directory and a regular output file name. The output path itself cannot
 be a symlink, directory or pipe.
 For input images, the renderer accepts up to 64 Mi pixels (67,108,864 pixels),
 with neither side greater than 21,600 pixels. Convert CMYK JPEGs to RGB before
-using them as maps.
+using them as maps. If an explicitly configured day map cannot be read, a
+finite render exits with an error. A running refresh keeps the last image
+and tries again next frame.
 
 ## Platform support in 1.3.2
 

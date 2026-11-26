@@ -24,9 +24,10 @@ loadSSEC(Image *&image, const unsigned char *&rgb, string &imageFile,
 static void
 loadRGB(Image *&image, const unsigned char *&rgb, string &imageFile, 
         const string &name, const int imageWidth, const int imageHeight,
-        const int shift)
+        const int shift, string &unreadableMap)
 {
-    bool foundFile = findFile(imageFile, "images");
+    const bool located = findFile(imageFile, "images");
+    bool foundFile = located;
     if (foundFile) 
     {
         image = new Image;
@@ -53,6 +54,7 @@ loadRGB(Image *&image, const unsigned char *&rgb, string &imageFile,
         ostringstream errStr;
         errStr << "Can't load map file " << imageFile << "\n";
         xpWarn(errStr.str(), __FILE__, __LINE__);
+        if (located && unreadableMap.empty()) unreadableMap = imageFile;
     }
 }
 
@@ -63,7 +65,7 @@ createMap(const double sLat, const double sLon,
           const double pR,
           Planet *planet, Ring *ring, 
           map<double, Planet *> &planetsFromSunMap,
-          PlanetProperties *planetProperties)
+          PlanetProperties *planetProperties, string &unreadableMap)
 {
     Map *m = NULL;
 
@@ -74,8 +76,10 @@ createMap(const double sLat, const double sLon,
     bool foundFile = false;
     if (imageFile.compare("none") != 0) 
     {
-       findFile(imageFile, "images");
-       foundFile = day->Read(imageFile.c_str());
+        const bool found = findFile(imageFile, "images");
+        foundFile = found && day->Read(imageFile.c_str());
+        if (!foundFile && (found || planetProperties->DayMapExplicit()) && unreadableMap.empty())
+            unreadableMap = imageFile;
     }
 
     if (!foundFile)
@@ -122,17 +126,17 @@ createMap(const double sLat, const double sLon,
         imageFile = planetProperties->NightMap();
         if (!imageFile.empty() && planetProperties->Shade() < 1) 
             loadRGB(night, nightRGB, imageFile, "night", 
-                    imageWidth, imageHeight, ishift);
+                    imageWidth, imageHeight, ishift, unreadableMap);
 
         imageFile = planetProperties->BumpMap();
         if (!imageFile.empty())
             loadRGB(bump, bumpRGB, imageFile, "bump", 
-                    imageWidth, imageHeight, ishift);
+                    imageWidth, imageHeight, ishift, unreadableMap);
         
         imageFile = planetProperties->SpecularMap();
         if (!imageFile.empty())
             loadRGB(specular, specularRGB, imageFile, "specular",
-                    imageWidth, imageHeight, ishift);
+                    imageWidth, imageHeight, ishift, unreadableMap);
         
         imageFile = planetProperties->CloudMap();
         if (!imageFile.empty())
@@ -144,7 +148,7 @@ createMap(const double sLat, const double sLon,
             else
             {
                 loadRGB(cloud, cloudRGB, imageFile, "cloud", 
-                        imageWidth, imageHeight, ishift);
+                        imageWidth, imageHeight, ishift, unreadableMap);
             }
         }
         

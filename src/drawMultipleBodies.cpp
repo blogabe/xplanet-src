@@ -47,7 +47,7 @@ void
 drawMultipleBodies(DisplayBase *display, Planet *target, 
                    const double upX, const double upY, const double upZ, 
                    map<double, Planet *> &planetsFromSunMap,
-                   PlanetProperties *planetProperties[])
+                   PlanetProperties *planetProperties[], string &unreadableMap)
 {
     Options *options = Options::getInstance();
 
@@ -415,9 +415,9 @@ drawMultipleBodies(DisplayBase *display, Planet *target,
         Map *m = NULL;
         m = createMap(sLat, sLon, oLat, oLon, width, height, pR,
                       current_planet, ring, planetsFromSunMap,
-                      currentProperties);
+                      currentProperties, unreadableMap);
 
-        if (!options->OutputMapRect().empty())
+        if (unreadableMap.empty() && !options->OutputMapRect().empty())
         {
             if (current_planet->Index() == options->Target())
             {
