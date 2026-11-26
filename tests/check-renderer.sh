@@ -202,3 +202,41 @@ render -verbo 0 -num_times 1 -output end-of-options.png --
 [ -s end-of-options.png ]
 if "$binary" -ver > ambiguous.log 2>&1; then exit 1; fi
 printf '%s\n' 'CLI option spelling and ordering passed'
+
+# A malformed line must not discard the subsequent annotation records.
+mkdir overlays
+printf '0 0 "Recovered marker" color=red\n' > overlays/clean-markers
+printf '0 -60 0 60 color=magenta\n' > overlays/clean-arcs
+printf '25544 "Recovered ISS" color=red image=none altcirc=0\n' > overlays/clean-sat
+sed -n '1,3p' "$assets/satellites/iss.tle" > overlays/clean-sat.tle
+for kind in markers arcs sat; do
+    { printf '%700s\n' bad; cat "overlays/clean-$kind"; } > "overlays/recover-$kind"
+done
+# Interleave a damaged set and an orphan element line before a complete set.
+{
+    sed -n '1,2p' overlays/clean-sat.tle
+    printf '%700s\n' bad
+    sed -n '3p' overlays/clean-sat.tle
+    cat overlays/clean-sat.tle
+} > overlays/recover-sat.tle
+for kind in marker arc satellite; do
+    case "$kind" in
+        marker) suffix=markers ;;
+        arc) suffix=arcs ;;
+        satellite) suffix=sat ;;
+    esac
+    for variant in clean recover; do
+        printf '[earth]\n%s_file=%s/overlays/%s-%s\n' "$kind" "$PWD" \
+            "$variant" "$suffix" > overlays.conf
+        render -config overlays.conf -num_times 1 -output "$variant-$kind.png" \
+            > "$variant-$kind.log" 2>&1
+    done
+    grep -F ': ignoring an overlong record.' "recover-$kind.log" >/dev/null
+    cmp "clean-$kind.png" "recover-$kind.png"
+    if cmp -s earth.png "clean-$kind.png"; then
+        printf 'Annotation fixture did not affect the image: %s\n' "$kind" >&2
+        exit 1
+    fi
+done
+grep -F 'recover-sat.tle:3: ignoring an overlong record.' recover-satellite.log >/dev/null
+printf '%s\n' 'Annotation and orbital record recovery passed'

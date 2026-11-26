@@ -6,6 +6,7 @@
 #include <cstring>
 #include <ctime>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <string>
 using namespace std;
@@ -48,6 +49,33 @@ xpExit(const string &message, const char *file, const int line)
 #endif
 
     exit(EXIT_FAILURE);
+}
+
+RecordStatus
+readBoundedRecord(istream &input, char *line, size_t size,
+                  const string &path, size_t &number)
+{
+    if (input.getline(line, size))
+    {
+        ++number;
+        return RecordStatus::Valid;
+    }
+    if (input.eof() || input.bad()) return RecordStatus::End;
+    input.clear();
+    input.ignore(numeric_limits<streamsize>::max(), '\n');
+    xpWarn(path + ":" + to_string(++number) + ": ignoring an overlong record.\n",
+           __FILE__, __LINE__);
+    return RecordStatus::Invalid;
+}
+
+bool
+nextAnnotationRecord(istream &input, char *line, size_t size,
+                     const string &path, size_t &number)
+{
+    RecordStatus status;
+    do { status = readBoundedRecord(input, line, size, path, number); }
+    while (status == RecordStatus::Invalid);
+    return status == RecordStatus::Valid;
 }
 
 void 

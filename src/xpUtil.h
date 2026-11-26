@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <ctime>
+#include <iosfwd>
 #include <string>
 
 #ifndef M_PI
@@ -19,6 +20,12 @@ const double AU_to_km = 149597870.66;
 const double FAR_DISTANCE = 1e6;
 
 const int MAX_LINE_LENGTH = 512;
+
+enum class RecordStatus { End, Valid, Invalid };
+RecordStatus readBoundedRecord(std::istream &input, char *line, size_t size,
+                               const std::string &path, size_t &number);
+bool nextAnnotationRecord(std::istream &input, char *line, size_t size,
+                          const std::string &path, size_t &number);
 
 extern void cross(const double a[3], const double b[3], double c[3]);
 

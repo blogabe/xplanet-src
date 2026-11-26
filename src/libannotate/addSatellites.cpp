@@ -528,19 +528,39 @@ loadSatelliteVector(PlanetProperties *planetProperties)
         if (foundFile)
         {
             ifstream inFile(tleFile.c_str());
-            char lines[3][80];
-            while (inFile.getline(lines[0], 80))
+            char lines[3][80] = {};
+            char line[80] = {};
+            size_t number = 0;
+            bool haveFirst = false;
+            for (;;)
             {
-                if ((!inFile.getline(lines[1], 80)) 
-                    || (!inFile.getline(lines[2], 80)))
+                const auto status = readBoundedRecord(inFile, line, sizeof(line),
+                                                      tleFile, number);
+                if (status == RecordStatus::End) break;
+                if (status == RecordStatus::Invalid)
                 {
-                    ostringstream errStr;
-                    errStr << "Malformed TLE file (" << tleFile << ")?\n";
-                    xpWarn(errStr.str(), __FILE__, __LINE__);
-                    break;
+                    haveFirst = false;
+                    lines[0][0] = '\0';
+                    continue;
                 }
-                
+                if (line[0] == '1' && line[1] == ' ')
+                {
+                    if (haveFirst) lines[0][0] = '\0';
+                    memcpy(lines[1], line, sizeof(line));
+                    haveFirst = true;
+                    continue;
+                }
+                if (line[0] != '2' || line[1] != ' ')
+                {
+                    haveFirst = false;
+                    memcpy(lines[0], line, sizeof(line));
+                    continue;
+                }
+                if (!haveFirst) continue;  // Unpaired line 2; look for the next set.
+                memcpy(lines[2], line, sizeof(line));
+                haveFirst = false;
                 Satellite sat(lines);
+                lines[0][0] = '\0';
                 
                 if (!sat.isGoodData()) 
                 {
@@ -552,6 +572,8 @@ loadSatelliteVector(PlanetProperties *planetProperties)
                 
                 satelliteVector.push_back(sat);
             }
+            if (haveFirst)
+                xpWarn(tleFile + ": incomplete final TLE record.\n", __FILE__, __LINE__);
             
             inFile.close();
         }
@@ -583,7 +605,8 @@ addSatellites(PlanetProperties *planetProperties, Planet *planet,
         {
             ifstream inFile(satFile.c_str());
             char *line = new char[MAX_LINE_LENGTH];
-            while (inFile.getline (line, MAX_LINE_LENGTH, '\n'))
+            size_t number = 0;
+            while (nextAnnotationRecord(inFile, line, MAX_LINE_LENGTH, satFile, number))
                 readSatelliteFile(line, planet, view, projection,
                                   planetProperties, annotationMap);
             

@@ -524,15 +524,11 @@ processSpiceKernels(const bool load)
         {
             ifstream inFile(kernelFile.c_str());
             char *line = new char[MAX_LINE_LENGTH];
-            while (inFile.getline(line, MAX_LINE_LENGTH, '\n'))
+            size_t number = 0;
+            while (nextAnnotationRecord(inFile, line, MAX_LINE_LENGTH, kernelFile, number))
             {
                 int ii = 0;
-                while (isDelimiter(line[ii]))
-                {
-                    ii++;
-                    if (static_cast<unsigned int> (ii) > strlen(line))
-                        continue;
-                }
+                while (!isEndOfLine(line[ii]) && isDelimiter(line[ii])) ++ii;
                 if (isEndOfLine(line[ii])) continue;
                 
                 char *ptr = &line[ii];
@@ -576,7 +572,8 @@ addSpiceObjects(map<double, Planet *> &planetsFromSunMap,
         {
             ifstream inFile(spiceFile.c_str());
             char *line = new char[MAX_LINE_LENGTH];
-            while (inFile.getline(line, MAX_LINE_LENGTH, '\n'))
+            size_t number = 0;
+            while (nextAnnotationRecord(inFile, line, MAX_LINE_LENGTH, spiceFile, number))
                 readSpiceFile(line, planetsFromSunMap, view, projection,
                               annotationMap);
             inFile.close();
