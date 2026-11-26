@@ -44,13 +44,16 @@ format. Use current orbital elements for live tracking.
 
 If a write fails, Xplanet leaves the existing image intact. Use a writable
 directory and a regular output file name. The output path itself cannot
-be a symlink, directory or pipe.
-For input images, the renderer accepts up to 64 Mi pixels (67,108,864 pixels),
-with neither side greater than 21,600 pixels. Convert CMYK JPEGs to RGB before
-using them as maps. If an explicitly configured day map cannot be read, a
+be a symlink, directory or pipe. To use a symlink, specify the real
+destination as Xplanet's output and let other programs read it through the link.
+Large input textures are supported, including 21,600 × 10,800 global maps.
+The renderer rejects oversized decoded images before allocating their main
+buffers. Convert CMYK JPEGs to RGB before using them as maps. If an explicitly configured day map cannot be read, a
 finite render exits with an error. A running refresh keeps the last image
 and tries again next frame. Use `-transpng` for transparent PNG output.
 Unknown options return an error; `-help` lists the available options.
+The old, unimplemented `-XYZ_file` option is not supported; use
+`-origin_file` for supported origin records.
 
 ## Platform support in 1.3.2
 

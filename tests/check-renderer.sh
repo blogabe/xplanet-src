@@ -216,6 +216,16 @@ printf '[earth]\nmagnify=not-a-number\nshade=bad\n' > numbers.conf
 render -config numbers.conf -num_times 1 -output numbers.png > numbers.log 2>&1
 grep -F 'numbers.conf:2: invalid magnify' numbers.log >/dev/null
 grep -F 'numbers.conf:3: invalid shade' numbers.log >/dev/null
+for shade in 0 50 50.0; do
+    printf '[earth]\nshade=%s\n' "$shade" > shade.conf
+    render -config shade.conf -num_times 1 -output "shade-$shade.png" > shade.log 2>&1
+    if grep -F 'invalid shade' shade.log; then exit 1; fi
+done
+cmp shade-50.png shade-50.0.png
+if cmp -s shade-0.png shade-50.png; then
+    printf '%s\n' 'Shade fixture did not affect the image' >&2
+    exit 1
+fi
 printf '%s\n' 'CLI, configuration and origin input checks passed'
 
 "$binary" --version > long-option.log

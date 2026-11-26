@@ -540,8 +540,8 @@ readConfig(const char *line, PlanetProperties *planetProperties[], const string 
             break;
         case SHADE:
         {
-            int s;
-            if (!readConfigNumber(returnString, s))
+            double s;
+            if (!readConfigNumber(returnString, s) || std::trunc(s) != s)
             {
                 numericWarning(location, "shade");
                 break;
