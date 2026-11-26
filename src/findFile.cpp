@@ -130,10 +130,7 @@ findCompanionFile(const string &name, const string &subdir,
         return false;
     };
 
-    // Check next to the selected marker list before any fallback directory.
-    string marker = name;
-    if (findFile(marker, subdir, false) && search(marker)) return true;
-
+    // Match findFile: the working directory comes before the search path.
     if (search(name)) return true;
     const auto directories = Options::getInstance()->getSearchDir();
     for (auto i = directories.rbegin(); i != directories.rend(); ++i)

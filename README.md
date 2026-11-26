@@ -84,9 +84,10 @@ render or Finder success.
 Existing TLE and Alpha-5 configurations still work. To use CelesTrak's
 OMM CSV, point `satellite_file` to a marker list (for example, `tracked`).
 Save the CSV beside it as `tracked.omm.csv` and put the decimal catalog IDs
-in `tracked`. Xplanet looks beside the selected marker list first, then
-checks the rest of the search path. If both formats are present in the
-same directory, it uses TLE.
+in `tracked`. Xplanet looks for orbit files in the current directory,
+then along the normal search path. The marker list’s location does not
+change that order. If both formats are present in the same directory,
+it uses TLE.
 
 Use an Earth, TEME, UTC, SGP4 element set. The reader accepts IDs up to nine
 digits and reads the CSV directly without converting it to TLE. See the

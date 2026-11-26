@@ -147,12 +147,23 @@ cat duplicate-row >> tracked.omm.csv
 check 0 satellite_duplicate -validate -config satellites.conf
 grep -q '"severity":"warning","code":"resource".*Duplicate NORAD_CAT_ID.*"line":3' satellite_duplicate.json
 
+# With a bundled marker list, user-supplied TLE data still has priority.
+# The element contents are identical here; the reported path proves lookup.
+printf '[earth]\nmap=none\nsatellite_file=iss\n' > local.conf
+cp "$source/xplanet/satellites/iss.tle" iss.tle
+check 0 cwd_tle -validate -config local.conf -searchdir "$source/xplanet"
+grep -q '"code":"satellite_orbit_source".*"path":"iss.tle"' cwd_tle.json
+mkdir priority
+mv iss.tle priority/
+check 0 priority_tle -validate -config local.conf -searchdir "$source/xplanet" \
+    -searchdir "$PWD/priority"
+grep -q '"code":"satellite_orbit_source".*/priority/iss.tle"' priority_tle.json
+
 # The local marker's OMM CSV beats a bundled TLE with the same basename.
 local_dir='local"catalog'
 mkdir "$local_dir"
 cp tracked "$local_dir/iss"
 cp tracked.omm.csv "$local_dir/iss.omm.csv"
-printf '[earth]\nmap=none\nsatellite_file=iss\n' > local.conf
 check 0 local_companion -validate -config local.conf -searchdir "$source/xplanet" \
     -searchdir "$PWD/$local_dir"
 grep '"code":"satellite_orbit_source"' local_companion.json | grep -Fq 'local\"catalog/iss.omm.csv'
