@@ -5,7 +5,7 @@
 
 class LineSegment : public Annotation
 {
- public:
+public:
     LineSegment(const unsigned char color[3], const int thickness,
                 const double X0, const double Y0,
                 const double X1, const double Y1);
@@ -15,7 +15,7 @@ class LineSegment : public Annotation
     virtual void Shift(const int x) { X0_ += x; X1_ += x; };
     virtual void Draw(DisplayBase *display);
 
- private:
+private:
 
     double X0_, Y0_, X1_, Y1_;
     double thickness_;

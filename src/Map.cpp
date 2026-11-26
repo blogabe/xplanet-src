@@ -814,7 +814,7 @@ Map::GetPixel(const double lat, double lon, unsigned char pixel[3]) const
 
 void
 Map::CopyBlock(unsigned char *dest, unsigned char *src,
-               const int x1, const int y1, int x2, int y2)
+                    const int x1, const int y1, int x2, int y2)
 {
     for (int j = y1; j < y2; j++)
     {

@@ -23,7 +23,7 @@ Symbol::~Symbol()
 
 void
 Symbol::DrawCircle(DisplayBase *display, const int r, 
-                   const unsigned char color[3])
+                        const unsigned char color[3])
 {
     if (r <= 0) return;
 

@@ -5,7 +5,7 @@
 
 class ProjectionGnomonic : public ProjectionBase
 {
- public:
+public:
     ProjectionGnomonic(const int f, const int w, const int h);
     ProjectionGnomonic(const int f, const int w, const int h,
                        const Options* o);
@@ -15,7 +15,7 @@ class ProjectionGnomonic : public ProjectionBase
 
     bool sphericalToPixel(double lon, double lat, double &x, double &y) const;
 
- private:
+private:
     void init(const int f, const int w, const int h, const Options* options);
 
     double scale_;

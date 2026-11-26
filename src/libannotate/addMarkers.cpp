@@ -392,12 +392,12 @@ readMarkerFile(const char *line, Planet *planet, const double pR,
 // Used for labeling planets/moons
 void
 addMarkers(PlanetProperties *planetProperties, Planet *planet, 
-           const double pixel_radius,
-           const double X, const double Y, const double Z,
-           View *view, ProjectionBase *projection, 
-           const int width, const int height, 
-           map<double, Planet *> &planetsFromSunMap, 
-           multimap<double, Annotation *> &annotationMap)
+                const double pixel_radius,
+                const double X, const double Y, const double Z,
+                View *view, ProjectionBase *projection,
+                const int width, const int height,
+                map<double, Planet *> &planetsFromSunMap,
+                multimap<double, Annotation *> &annotationMap)
 {
     vector<string> markerfiles = planetProperties->MarkerFiles();
     vector<string>::iterator ii = markerfiles.begin();
@@ -440,8 +440,8 @@ addMarkers(PlanetProperties *planetProperties, Planet *planet,
 // Used for labeling star fields
 void
 addMarkers(View *view, const int width, const int height, 
-           map<double, Planet *> &planetsFromSunMap, 
-           multimap<double, Annotation *> &annotationMap)
+                map<double, Planet *> &planetsFromSunMap,
+                multimap<double, Annotation *> &annotationMap)
 {
     Options *options = Options::getInstance();
 

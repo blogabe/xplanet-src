@@ -45,9 +45,9 @@ arrangeMarkers(multimap<double, Annotation *> &annotationMap,
 
 void
 drawMultipleBodies(DisplayBase *display, Planet *target, 
-                   const double upX, const double upY, const double upZ, 
-                   map<double, Planet *> &planetsFromSunMap,
-                   PlanetProperties *planetProperties[], string &unreadableMap)
+                        const double upX, const double upY, const double upZ,
+                        map<double, Planet *> &planetsFromSunMap,
+                        PlanetProperties *planetProperties[], string &unreadableMap)
 {
     Options *options = Options::getInstance();
 

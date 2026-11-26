@@ -51,10 +51,10 @@ drawAltitudeHalfCirc(ProjectionRectangular *rect,
 // Draw a circle centered at lat, lon with angular radius rad
 void
 drawCircle(const double lat, const double lon, const double rad,
-           const unsigned char color[3], const int thickness,
-           const double spacing, const double magnify,
-           Planet *planet, View *view, ProjectionBase *projection,
-           multimap<double, Annotation *> &annotationMap)
+                const unsigned char color[3], const int thickness,
+                const double spacing, const double magnify,
+                Planet *planet, View *view, ProjectionBase *projection,
+                multimap<double, Annotation *> &annotationMap)
 {
     ProjectionRectangular *rect = new ProjectionRectangular(1, 0, 0);
 

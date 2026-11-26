@@ -91,8 +91,8 @@ encodeImage(Format format, FILE *file, int width, int height,
 
 bool
 WriteImage(const char *filename, const int width, const int height,
-           unsigned char * const rgb_data, unsigned char * const png_alpha,
-           const int quality)
+                unsigned char * const rgb_data, unsigned char * const png_alpha,
+                const int quality)
 {
     if (filename == NULL || *filename == '\0' || rgb_data == NULL ||
         width <= 0 || height <= 0 || width > (INT_MAX / 4) / height)

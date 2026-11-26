@@ -10,7 +10,7 @@ public:
     virtual ~Ephemeris();
 
     virtual void GetHeliocentricXYZ(const body b, const double tjd, 
-				    double &Px, double &Py, double &Pz) = 0;
+                                    double &Px, double &Py, double &Pz) = 0;
 };
 
 #endif

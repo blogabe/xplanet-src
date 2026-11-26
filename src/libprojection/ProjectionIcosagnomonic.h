@@ -30,13 +30,13 @@ private:
         PointXY(const double _x, const double _y) : x(_x), y(_y) {};
       
         PointXY operator-(const PointXY& p) const
-            { return PointXY(this->x - p.x, this->y - p.y); }
+        { return PointXY(this->x - p.x, this->y - p.y); }
         PointXY operator+(const PointXY& p) const
-            { return PointXY(this->x + p.x, this->y + p.y); }
+        { return PointXY(this->x + p.x, this->y + p.y); }
         PointXY operator-=(const PointXY& p)
-            { return *this = *this - p; }
+        { return *this = *this - p; }
         PointXY operator+=(const PointXY& p)
-            { return *this = *this + p; }
+        { return *this = *this + p; }
 
         /* Returns true iff p1 and p2 are on the same side of the line
          * passing through l1 and l2, or if p1 is on same line. */
@@ -111,7 +111,7 @@ private:
     class Triangle {
     public:
         Triangle(PointXY a, PointXY b, PointXY c,
-		 PointLL la, PointLL lb, PointLL lc);
+                 PointLL la, PointLL lb, PointLL lc);
         Triangle(const Triangle& T);
         virtual ~Triangle();
       
@@ -140,8 +140,8 @@ private:
     class ClippedTriangle : public Triangle {
     public:
         ClippedTriangle(PointXY a,  PointXY b,  PointXY c,
-			PointLL la, PointLL lb, PointLL lc,
-			Polygon path)
+                        PointLL la, PointLL lb, PointLL lc,
+                        Polygon path)
             : Triangle(a, b, c, la, lb, lc), clip(path) {};
 
         ClippedTriangle(const ClippedTriangle& T)

@@ -11,7 +11,7 @@ class DisplayBase;
 
 class TextRendererFT2 : public TextRenderer
 {
- public:
+public:
     TextRendererFT2(DisplayBase *display);
     virtual ~TextRendererFT2();
 
@@ -31,7 +31,7 @@ class TextRendererFT2 : public TextRenderer
 
     virtual void TextBox(int &textWidth, int &textHeight);
 
- private:
+private:
     FT_Library library_;
     FT_Face face_;
 

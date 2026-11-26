@@ -251,7 +251,7 @@ RADecToXYZ(double RA, double Dec, double &X, double &Y, double &Z)
 
 void
 fromJulian(double jd, int &year, int &month, int &day, 
-           int &hour, int &min, double &sec)
+                int &hour, int &min, double &sec)
 {
     jd += 0.5;
     int Z = (int) jd;
@@ -321,7 +321,7 @@ get_tv_sec(double jd)
     fromJulian(jd, year, month, day, hour, min, sec);
 
     tm tm_struct = { (int) floor(sec + 0.5), min, hour, day,
-                     month - 1, year - 1900, 0, 0, -1 };
+                    month - 1, year - 1900, 0, 0, -1 };
 
 #ifdef HAVE_TIMEGM
     time_t returnval = timegm(&tm_struct);
@@ -504,7 +504,7 @@ delT(const double jd)
         }
     }
 
-/* 
+    /*
     int year, month, day, hour, min;
     double sec;
     fromJulian(jd, year, month, day, hour, min, sec);

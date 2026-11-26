@@ -60,7 +60,7 @@ Options::getInstance()
 
 Options::~Options()
 {
-//    delete instance_;
+    //    delete instance_;
 }
 
 Options::Options() :
@@ -353,14 +353,14 @@ Options::parseArgs(int argc, char **argv)
 #ifdef HAVE_LIBFREETYPE
             font_.assign(optarg);
 #else
-            {
-                ostringstream errMsg;
-                errMsg << "Sorry, this binary was built without FreeType "
+        {
+            ostringstream errMsg;
+            errMsg << "Sorry, this binary was built without FreeType "
                        << "support. The -" 
                        << long_options[option_index].name 
                        << " option will be ignored.\n";
-                xpWarn(errMsg.str(), __FILE__, __LINE__);
-            }
+            xpWarn(errMsg.str(), __FILE__, __LINE__);
+        }
 #endif
             break;
         case FONTSIZE:
@@ -664,13 +664,13 @@ Options::parseArgs(int argc, char **argv)
 #ifdef HAVE_LIBPANGOFT2 
             pango_ = true;
 #else
-            {
-                ostringstream errMsg;
-                errMsg << "Sorry, this binary was built without Pango "
+        {
+            ostringstream errMsg;
+            errMsg << "Sorry, this binary was built without Pango "
                        << "support. The -" << long_options[option_index].name 
                        << " option will be ignored.\n";
-                xpWarn(errMsg.str(), __FILE__, __LINE__);
-            }
+            xpWarn(errMsg.str(), __FILE__, __LINE__);
+        }
 #endif
             break;
         case PATH_RELATIVE_TO:

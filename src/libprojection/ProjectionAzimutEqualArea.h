@@ -9,14 +9,14 @@
 
 class ProjectionAzimutEqualArea : public ProjectionBase
 {
- public:
+public:
     ProjectionAzimutEqualArea(const int f, const int w, const int h);
     bool pixelToSpherical(const double x, const double y, 
-			  double &lon, double &lat);
+                          double &lon, double &lat);
 
     bool sphericalToPixel(double lon, double lat, double &x, double &y) const;
 
- private:
+private:
     int iside_;
     static void rot90degree(double &lon, double &lat);
 };

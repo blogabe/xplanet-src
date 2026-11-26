@@ -9,7 +9,7 @@ using namespace std;
 #include "xpUtil.h"
 
 ProjectionAzimutEqualArea::ProjectionAzimutEqualArea(const int f, const int w, 
-						     const int h) 
+                                                     const int h)
     : ProjectionBase(f, w, h)
 {
     isWrapAround_ = false;
@@ -41,7 +41,7 @@ ProjectionAzimutEqualArea::rot90degree(double &lon, double &lat)
 
 bool
 ProjectionAzimutEqualArea::pixelToSpherical(const double x, const double y, 
-					    double &lon, double &lat)
+                                            double &lon, double &lat)
 {
     const double X = 2.0 * (x - centerX_) / iside_;
     const double Y = -2.0 * (y - centerY_) / iside_;
@@ -64,7 +64,7 @@ ProjectionAzimutEqualArea::pixelToSpherical(const double x, const double y,
 
 bool
 ProjectionAzimutEqualArea::sphericalToPixel(double lon, double lat,
-					    double &x, double &y) const
+                                            double &x, double &y) const
 {
     if (rotate_) RotateZYX(lat, lon);
 

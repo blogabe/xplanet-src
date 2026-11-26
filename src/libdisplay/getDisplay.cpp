@@ -25,14 +25,14 @@ DisplayBase *getDisplay(const int times_run)
     Options *options = Options::getInstance();
 
     if (options->DisplayMode() == OUTPUT)
-	return(new DisplayOutput(times_run));
+        return(new DisplayOutput(times_run));
 
 #ifdef HAVE_LIBX11
     Display *d = XOpenDisplay(NULL);
     if (d != NULL) 
     {
         XCloseDisplay(d);
-	return(new DisplayX11(times_run));
+        return(new DisplayX11(times_run));
     }
 #endif
 

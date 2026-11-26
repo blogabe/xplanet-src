@@ -40,7 +40,7 @@ computeArguments(const double t,
 
 void
 jupsat(const double jd, const body b, 
-       double &X, double &Y, double &Z)
+            double &X, double &Y, double &Z)
 {
     const double t = jd - 2443000.5;
 

@@ -62,8 +62,8 @@ cleanUpEphemeris()
 
 void
 GetHeliocentricXYZ(const body index, const body primary, 
-                   const double julianDay, const bool relativeToSun, 
-                   double &X, double &Y, double &Z)
+                        const double julianDay, const bool relativeToSun,
+                        double &X, double &Y, double &Z)
 {
 #ifdef HAVE_CSPICE
     Options *options = Options::getInstance();

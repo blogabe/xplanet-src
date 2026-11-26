@@ -9,7 +9,7 @@ class Ephemeris;
 
 class Planet
 {
- public:
+public:
     static body parseBodyName(char *name);
 
     Planet(const double jd, const body this_body);
@@ -65,7 +65,7 @@ class Planet
 
     bool IsInMyShadow(const double x, const double y, const double z);
 
- private:
+private:
     body index_;
 
     Ephemeris *ephem_;

@@ -369,12 +369,12 @@ readSpiceFile(const char *line,
         for (map<double, Planet *>::iterator it0 = planetsFromSunMap.begin();
              it0 != planetsFromSunMap.end(); it0++)
         {
-          Planet *planet = it0->second;
-          double rX, rY, rZ;
-          planet->getPosition(rX, rY, rZ);
-          view->XYZToPixel(rX, rY, rZ, rX, rY, rZ);
-          rX += options->CenterX();
-          rY += options->CenterY();
+            Planet *planet = it0->second;
+            double rX, rY, rZ;
+            planet->getPosition(rX, rY, rZ);
+            view->XYZToPixel(rX, rY, rZ, rX, rY, rZ);
+            rX += options->CenterX();
+            rY += options->CenterY();
           
             double pixelDist = sqrt((rX - pX)*(rX - pX) 
                                     + (rY - pY)*(rY - pY));

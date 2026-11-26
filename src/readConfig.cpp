@@ -212,9 +212,9 @@ readConfig(const char *line, PlanetProperties *planetProperties[], const string 
         }
         break;
         case CLOUD_SSEC:
-          currentProperties->SSECMap(returnString[0] == 't' 
+            currentProperties->SSECMap(returnString[0] == 't'
                                      || returnString[0] == 'T');
-          break;
+            break;
         case CLOUD_THRESHOLD:
         {
             int t;

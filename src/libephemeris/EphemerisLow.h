@@ -14,7 +14,7 @@ public:
 
     void GetHeliocentricXYZ(const body b, const double tjd, 
                             double &Px, double &Py, double &Pz);
- private:
+private:
     void kepler(const double al, const std::complex<double> &z, 
                 const double u, std::complex<double> &zto, double &r);
 

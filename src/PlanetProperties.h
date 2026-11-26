@@ -9,7 +9,7 @@
 
 class PlanetProperties
 {
- public:
+public:
     PlanetProperties(const body index);
     ~PlanetProperties();
 
@@ -85,15 +85,15 @@ class PlanetProperties
     bool MapBounds() const { return(mapBounds_); };
     void MapBounds(double &uly, double &ulx, 
                    double &lry, double &lrx) const
-        {
-            uly = mapUly_; ulx = mapUlx_; lry = mapLry_; lrx = mapLrx_;
-        };
+    {
+        uly = mapUly_; ulx = mapUlx_; lry = mapLry_; lrx = mapLrx_;
+    };
     
     void MapBounds(bool b, double uly, double ulx, 
                    double lry, double lrx)
-        {
-            mapBounds_ = b; mapUly_ = uly; mapUlx_ = ulx; mapLry_ = lry; mapLrx_ = lrx;
-        };
+    {
+        mapBounds_ = b; mapUly_ = uly; mapUlx_ = ulx; mapLry_ = lry; mapLrx_ = lrx;
+    };
     
     double MinRadiusForLabel() const { return(minRadiusForLabel_); };
     void MinRadiusForLabel(double m) { minRadiusForLabel_ = m; };
@@ -152,7 +152,7 @@ class PlanetProperties
     void DelOrbit(const double d) { delOrbit_ = d; };
     double DelOrbit() const { return(delOrbit_); };
 
- private:
+private:
 
     body index_;
 

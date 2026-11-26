@@ -385,22 +385,22 @@ readSatelliteFile(const char *line, Planet *planet,
     double X0, Y0, Z0;
     earth0.getPosition(X0, Y0, Z0);
     if (trailType == ORBIT){
-      // convert lon/lat/rad to inertial XYZ, then to lon/lat/rad at
-      // time of plot
-      double jd = toJulian(startTime);
-      Planet earth(jd, EARTH);
-      earth.calcHeliocentricEquatorial();
-      double X, Y, Z;
-      earth.getPosition(X, Y, Z);
-      double sX, sY, sZ;
-      earth.PlanetographicToXYZ(sX, sY, sZ, lat, lon, rad);
-      sX -= X;
-      sY -= Y;
-      sZ -= Z;
-      sX += X0;
-      sY += Y0;
-      sZ += Z0;
-      earth0.XYZToPlanetographic(sX, sY, sZ, lat, lon, rad);
+        // convert lon/lat/rad to inertial XYZ, then to lon/lat/rad at
+        // time of plot
+        double jd = toJulian(startTime);
+        Planet earth(jd, EARTH);
+        earth.calcHeliocentricEquatorial();
+        double X, Y, Z;
+        earth.getPosition(X, Y, Z);
+        double sX, sY, sZ;
+        earth.PlanetographicToXYZ(sX, sY, sZ, lat, lon, rad);
+        sX -= X;
+        sY -= Y;
+        sZ -= Z;
+        sX += X0;
+        sY += Y0;
+        sZ += Z0;
+        earth0.XYZToPlanetographic(sX, sY, sZ, lat, lon, rad);
     }
     
     for (time_t t = startTime + interval; t <= endTime; t += interval)
@@ -411,24 +411,24 @@ readSatelliteFile(const char *line, Planet *planet,
 
         satellite->getSpherical(t, lat, lon, rad);
 
-	if (trailType == ORBIT){
-	  // convert lon/lat/rad to inertial XYZ, then to lon/lat/rad at
-	  // time of plot
-	  double jd = toJulian(t);
-	  Planet earth(jd, EARTH);
-	  earth.calcHeliocentricEquatorial();
-	  double X, Y, Z;
-	  earth.getPosition(X, Y, Z);
-	  double sX, sY, sZ;
-	  earth.PlanetographicToXYZ(sX, sY, sZ, lat, lon, rad);
-	  sX -= X;
-	  sY -= Y;
-	  sZ -= Z;
-	  sX += X0;
-	  sY += Y0;
-	  sZ += Z0;
-	  earth0.XYZToPlanetographic(sX, sY, sZ, lat, lon, rad);
-	}
+        if (trailType == ORBIT){
+          // convert lon/lat/rad to inertial XYZ, then to lon/lat/rad at
+          // time of plot
+          double jd = toJulian(t);
+          Planet earth(jd, EARTH);
+          earth.calcHeliocentricEquatorial();
+          double X, Y, Z;
+          earth.getPosition(X, Y, Z);
+          double sX, sY, sZ;
+          earth.PlanetographicToXYZ(sX, sY, sZ, lat, lon, rad);
+          sX -= X;
+          sY -= Y;
+          sZ -= Z;
+          sX += X0;
+          sY += Y0;
+          sZ += Z0;
+          earth0.XYZToPlanetographic(sX, sY, sZ, lat, lon, rad);
+        }
 
         if (outputFile.is_open()) 
         {

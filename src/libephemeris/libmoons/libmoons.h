@@ -14,7 +14,7 @@ jupsat(const double jd, const body b,
 
 extern void
 jupsat2(const double jd, const body b, 
-	double &X, double &Y, double &Z);
+        double &X, double &Y, double &Z);
 
 extern void
 satsat(const double jd, const body b, 

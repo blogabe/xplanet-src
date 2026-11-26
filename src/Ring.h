@@ -7,7 +7,7 @@ class Planet;
 
 class Ring
 {
- public:
+public:
     Ring(const double inner_radius, const double outer_radius, 
          const double *ring_brightness, const int num_bright,
          const double *ring_transparency, const int num_trans,
@@ -36,7 +36,7 @@ class Ring
 
     double getOuterRadius() const { return(r_out); };
 
- private:
+private:
     double r_out;  // outer ring radius, units of planetary radii
     double dr_b;   // resolution of brightness grid
     double dr_t;   // resolution of transparency grid

@@ -5,17 +5,17 @@ class View;
 
 class Separation
 {
- public:
+public:
     Separation(const double oX, const double oY, const double oZ,
-	       const double tX, const double tY, const double tZ, 
-	       const double sX, const double sY, const double sZ);
+               const double tX, const double tY, const double tZ,
+               const double sX, const double sY, const double sZ);
 
     ~Separation();
 
     void getOrigin(double &oX, double &oY, double &oZ);
     void setSeparation(double sep);
 
- private:
+private:
     double tX_, tY_, tZ_;
     double sX_, sY_, sZ_;
     double oX_, oY_, oZ_;

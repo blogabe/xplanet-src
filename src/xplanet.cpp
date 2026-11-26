@@ -105,9 +105,9 @@ main(int argc, char **argv)
 
     if (options->RayleighFile().length() > 0)
     {
-	RayleighScattering rayleigh(options->RayleighFile());
-	rayleigh.createTables();
-	return(EXIT_SUCCESS);
+        RayleighScattering rayleigh(options->RayleighFile());
+        rayleigh.createTables();
+        return(EXIT_SUCCESS);
     }
 
     setUpEphemeris();

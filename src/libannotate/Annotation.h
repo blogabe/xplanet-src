@@ -5,7 +5,7 @@ class DisplayBase;
 
 class Annotation
 {
- public:
+public:
     Annotation();
 
     Annotation(const unsigned char color[3]);
@@ -18,7 +18,7 @@ class Annotation
     virtual void Shift(const int x) = 0;
     virtual void Draw(DisplayBase *display) = 0;
 
- protected:
+protected:
 
     unsigned char color_[3];
     int width_, height_;

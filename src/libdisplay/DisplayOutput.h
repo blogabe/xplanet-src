@@ -5,13 +5,13 @@
 
 class DisplayOutput : public DisplayBase
 {
- public:
+public:
     DisplayOutput(const int tr);
     virtual ~DisplayOutput();
 
     void renderImage(PlanetProperties *planetProperties[]);
 
- private:
+private:
     int quality_;
 };
 

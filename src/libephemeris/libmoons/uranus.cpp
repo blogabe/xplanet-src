@@ -110,7 +110,7 @@ UranicentricToGeocentricEquatorial(double &X, double &Y, double &Z)
 
 void
 urasat(const double jd, const body b, 
-       double &X, double &Y, double &Z)
+            double &X, double &Y, double &Z)
 {
     const double t = jd - 2444239.5;
     const double tcen = t/365.25;
@@ -492,7 +492,7 @@ urasat(const double jd, const body b,
              + 451.69 * sin(I5)) * 1e-6;
 
         GMS = GMU + GM5;
-    break;
+        break;
     default:
         xpExit("Unknown Uranus satellite\n", __FILE__, __LINE__);
     }

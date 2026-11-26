@@ -5,18 +5,18 @@ class Options;
 
 class ProjectionBase
 {
- public:
+public:
     ProjectionBase(const int flipped, const int w, const int h);
     ProjectionBase(const int flipped, const int w, const int h,
-		   const Options* o);
+                   const Options* o);
 
     virtual ~ProjectionBase();
 
     virtual bool pixelToSpherical(const double x, const double y, 
-				  double &lon, double &lat) = 0;
+                                  double &lon, double &lat) = 0;
 
     virtual bool sphericalToPixel(const double lon, const double lat,
-				  double &x, double &y) const = 0;
+                                  double &x, double &y) const = 0;
 
     bool IsWrapAround() const { return(isWrapAround_); };
 
@@ -29,12 +29,12 @@ class ProjectionBase
     virtual void setRange(const double range);
 
     void SetXYZRotationMatrix(const double angle_x, 
-			      const double angle_y, 
-			      const double angle_z);
+                              const double angle_y,
+                              const double angle_z);
     void SetZYXRotationMatrix(const double angle_x, 
-			      const double angle_y, 
-			      const double angle_z);
- protected:
+                              const double angle_y,
+                              const double angle_z);
+protected:
     const int flipped_;
     const int width_, height_;
     double radius_;
@@ -57,7 +57,7 @@ class ProjectionBase
     void destroyPhotoTable();
     double getPhotoFunction(const double x) const;
 
- private:
+private:
     void init(const int flipped, const int w, const int h, const Options* options);
 	
 };

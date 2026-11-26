@@ -131,7 +131,7 @@ getProjection(const int projection, const int flipped,
         break;
     case EQUAL_AREA:
         thisProjection = new ProjectionAzimutEqualArea(flipped, width, 
-						       height);
+                                                       height);
         break;
     case GNOMONIC:
         thisProjection = new ProjectionGnomonic(flipped, width, height);

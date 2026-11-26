@@ -5,7 +5,7 @@
 
 class DisplayMSWin : public DisplayBase
 {
- public:
+public:
     DisplayMSWin(const int tr);
     virtual ~DisplayMSWin();
 
