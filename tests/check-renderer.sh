@@ -135,6 +135,34 @@ assert_rgb globe.bmp 160 131  74  43 174 24
 assert_rgb globe.bmp  10  10   0   0   0
 printf '%s\n' 'Lambert and default globe preserve latitude orientation'
 
+# Catalog stars must change the globe background with random stars disabled.
+# No explicit projection: a full-map projection has no surrounding sky.
+printf '# No catalog sources\n' > empty-stars
+render_map 20260320.120000 asymmetric.conf empty-sky.bmp \
+    -longitude 45 -latitude 0 -range 8 -radius 24 -starfreq 0 -starmap "$PWD/empty-stars"
+render_map 20260320.120000 asymmetric.conf catalog-sky.bmp \
+    -longitude 45 -latitude 0 -range 8 -radius 24 -starfreq 0 -starmap BSC -verbosity 3 \
+    > catalog.log 2>&1
+grep -F "Looking for $assets/stars/BSC ... found" catalog.log >/dev/null
+# Count lit pixels in the top 24 rows, all outside the 39-pixel-radius globe.
+# Require stars outside the globe, not simply any difference in the frame.
+sky_pixels()
+{
+    od -An -v -tu1 -j "$((54 + 136 * 960))" -N "$((24 * 960))" "$1" | awk '
+        { for (i = 1; i <= NF; ++i) if ($i > 0) ++lit }
+        END { print lit+0 }
+    '
+}
+[ "$(sky_pixels catalog-sky.bmp)" -gt "$(sky_pixels empty-sky.bmp)" ]
+if grep -Eq '^[[:space:]]+FreeType' version.log; then
+    render_map 20260320.120000 asymmetric.conf catalog-label.bmp \
+        -longitude 45 -latitude 0 -range 8 -radius 24 -starfreq 0 -starmap BSC \
+        -label -font FreeMonoBold.ttf -verbosity 3 > catalog-label.log 2>&1
+    grep -F "Looking for $assets/fonts/FreeMonoBold.ttf ... found" catalog-label.log >/dev/null
+    if cmp -s catalog-sky.bmp catalog-label.bmp; then exit 1; fi
+fi
+printf '%s\n' 'Catalog stars render outside the globe; bundled font resolves with FreeType'
+
 # Near equinox, -45° longitude is lit at noon UTC and +135° at midnight UTC.
 # Both samples are far from the terminator, so expect the exact lit or night
 # texture (within the same tolerance), not a renderer-generated golden image.

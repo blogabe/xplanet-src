@@ -17,7 +17,9 @@ directory. They don't use the current user's maps or change the desktop.
   checks orientation and longitude on rectangular maps and orientation in
   Lambert and default globe renders. Fixed UTC dates exercise lighting
   near dawn and the seasonal shift at high latitude. Pixel tolerances
-  allow for the renderer's texture filtering.
+  allow for the renderer's texture filtering. A globe also checks that the
+  bundled star catalog draws stars in the sky with random stars disabled.
+  If FreeType is enabled, the bundled font is exercised on a label.
 - File-output checks cover replacement, preservation on write failure,
   temporary-file cleanup, rejected destinations and frame numbering.
 - Additional cases check refresh recovery, timezone restoration, observer
