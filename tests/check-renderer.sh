@@ -37,6 +37,28 @@ render()
     "$binary" -searchdir "$assets" -target earth -projection rectangular \
         -date 20261125.120000 -geometry 320x160 "$@"
 }
+# Lossless, uniform 8x4 RGB(40,70,120) PNG. Render with no day/night
+# attenuation and check every output BGR sample. Legacy integer filtering
+# and shading truncate intermediate values; allow up to five levels per channel.
+printf '%b' '\0211\0120\0116\0107\0015\0012\0032\0012\0000\0000\0000\0015\0111\0110\0104\0122' \
+    '\0000\0000\0000\0010\0000\0000\0000\0004\0010\0002\0000\0000\0000\0074\0257\0351\0247' \
+    '\0000\0000\0000\0021\0111\0104\0101\0124\0170\0234\0143\0320\0160\0253\0300\0212\0030\0250' \
+    '\0047\0001\0000\0224\0057\0034\0301\0136\0034\0235\0341\0000\0000\0000\0000\0111\0105\0116' \
+    '\0104\0256\0102\0140\0202' > solid.png
+printf '[earth]\nmap=%s/solid.png\nnight_map=%s/solid.png\nshade=100\n' "$PWD" "$PWD" > solid.conf
+render -config solid.conf -num_times 1 -output solid.bmp
+od -An -v -tu1 -j54 solid.bmp | awk '
+    BEGIN { split("120 70 40", bgr, " ") }
+    {
+        for (i = 1; i <= NF; ++i) {
+            delta = $i - bgr[n++ % 3 + 1]
+            if (delta < -5 || delta > 5) exit 1
+        }
+    }
+    END { if (n != 320 * 160 * 3) exit 1 }
+'
+printf '%s\n' 'Fixed-date render matches all expected RGB pixels'
+
 fail_output()
 {
     if render -num_times 1 -output "$1" > failure.log 2>&1; then
