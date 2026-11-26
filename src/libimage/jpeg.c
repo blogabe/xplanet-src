@@ -47,6 +47,7 @@ jpeg_read_message(j_common_ptr cinfo, int level)
     if (level >= 0) return;
     switch (cinfo->err->msg_code)
     {
+    case JWRN_JFIF_MAJOR:  /* APP0 version metadata, not scan data. */
     case JWRN_EXTRANEOUS_DATA:
     case JWRN_NOT_SEQUENTIAL:
         /* The decoder can still recover every sample in these cases. */

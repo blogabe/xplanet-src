@@ -86,21 +86,25 @@ checkJpegWarnings()
     require(sos != std::string::npos && clean.size() >= sos + 16
             && clean.compare(clean.size() - 2, 2, "\xff\xd9") == 0,
             "Expected sequential JPEG fixture");
-    std::string stray = clean, scan = clean;
+    const size_t jfif = clean.find("JFIF");
+    require(jfif != std::string::npos && jfif + 6 < sos && clean[jfif + 4] == '\0',
+            "Expected a JFIF APP0 fixture");
+    std::string stray = clean, scan = clean, new_jfif = clean;
+    new_jfif[jfif + 5] = 2;
     stray.insert(sos, 1, 'x');
     const size_t scan_params = sos + 5 + 2 * static_cast<unsigned char>(scan[sos + 4]);
     scan[scan_params + 1] = 62;
-    const std::string cases[] = {stray, scan, clean.substr(0, clean.size() - 2),
+    const std::string cases[] = {stray, scan, new_jfif, clean.substr(0, clean.size() - 2),
                                 clean.substr(0, scan_params + 4)};
     Image reference, result;
     require(reference.Read("image.jpg"), "Decode clean JPEG reference");
-    for (size_t i = 0; i < 4; ++i)
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i)
     {
         std::ofstream file("warning.jpg", std::ios::binary);
         file.write(cases[i].data(), cases[i].size());
         file.close();
         require(file.good(), "Write JPEG warning case");
-        if (i == 3)
+        if (i == sizeof(cases) / sizeof(cases[0]) - 1)
         {
             const auto *last = result.getRGBData();
             require(!result.Read("warning.jpg") && result.getRGBData() == last,
