@@ -504,7 +504,10 @@ On Microsoft Windows and Mac OS X, xplanet creates an intermediate
 image file which is used to set the desktop.  This file will be
 created in the \-tmpdir directory.  By default, this image is removed
 after the desktop has been set.  Specifying this option will leave the
-file in place.
+file in place. On macOS, Aqua generates one wallpaper canvas using the
+main display's effective resolution (the “Looks like” size on a scaled
+display), not its Retina backing-pixel dimensions. The renderer does not
+generate separate images sized to each monitor.
 
 .TP
 .B \-searchdir directory
