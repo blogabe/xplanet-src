@@ -11,6 +11,7 @@ using namespace std;
 
 #include "libimage/Image.h"
 #include "libmultiple/RayleighScattering.h"
+#include "libmultiple/RayleighTable.h"
 
 // Calculate the airmass using the expressions in Smith and Smith, JGR
 // 77(19), 3592--3597, 1972
@@ -321,8 +322,6 @@ RayleighScattering::RayleighScattering(string configFile) :
     for (int i = 0; i < 181; i++)
     {
         phaseDeg_.push_back((double) i);
-        PNGTable_.insert(make_pair(i, (Image *) NULL));
-        BINTable_.insert(make_pair(i, (double *) NULL));
     }
 
     for (int i = 0; i < 3; i++) scattering_[i] = 0;
@@ -380,12 +379,11 @@ RayleighScattering::readConfigFile(string configFile)
         if (static_cast<unsigned int> (i) > strlen(line)) continue;
         if (isEndOfLine(line[i])) continue;
 
-        char templ1[MAX_LINE_LENGTH];
-        char templ2[MAX_LINE_LENGTH];
-        sscanf(line, "TEMPLATES %s %s", templ1, templ2);
-
-        diskTemplate_.assign(templ1);
-        limbTemplate_.assign(templ2);
+        istringstream fields(line + i);
+        string kind;
+        if (!(fields >> kind >> diskTemplate_ >> limbTemplate_) || kind != "TEMPLATES"
+            || !validRayleighTemplate(diskTemplate_) || !validRayleighTemplate(limbTemplate_))
+            xpExit("Invalid TEMPLATES entry in " + configFile + "\n", __FILE__, __LINE__);
 
         size_t found = diskTemplate_.find(".png");
         if (found == string::npos) found = diskTemplate_.find(".PNG");
@@ -498,18 +496,14 @@ RayleighScattering::clear()
 void
 RayleighScattering::clearTables()
 { 
-    for (map<int, Image *>::iterator it = PNGTable_.begin(); 
-         it != PNGTable_.end(); it++)
-    {
+    for (map<string, Image *>::iterator it = PNGTable_.begin();
+         it != PNGTable_.end(); ++it)
         delete it->second;
-        it->second = NULL;
-    }
-    for (map<int, double *>::iterator it = BINTable_.begin(); 
-         it != BINTable_.end(); it++)
-    {
+    for (map<string, double *>::iterator it = BINTable_.begin();
+         it != BINTable_.end(); ++it)
         delete [] it->second;
-        it->second = NULL;
-    }
+    PNGTable_.clear();
+    BINTable_.clear();
 }
 
 // store a double (0 < x < 1) as a four byte array of unsigned char
@@ -609,31 +603,6 @@ RayleighScattering::writeTable(const char *buffer, double *array,
     }
 }
 
-double *
-RayleighScattering::readBinaryTable(const char *filename)
-{
-    double *dblArray = NULL;
-
-    FILE *inFile = fopen(filename, "rb");
-
-    if (inFile != NULL)
-    {
-        size_t dim0, dim1, dim2;
-        fread(&dim0, sizeof(size_t), 1, inFile);
-        fread(&dim1, sizeof(size_t), 1, inFile);
-        fread(&dim2, sizeof(size_t), 1, inFile);
-
-        size_t size = dim0*dim1*dim2;
-
-        dblArray = new double[size];
-        fread(dblArray, sizeof(double), size, inFile);
-    }
-
-    fclose(inFile);
-
-    return dblArray;
-}
-
 double
 RayleighScattering::getColor(int index)
 {
@@ -656,84 +625,65 @@ RayleighScattering::calcScatteringDisk(double inc, double ems, double phase)
         calcScattering(inc, ems, phase, ic, emission_, diskTemplate_, diskPNG_);
 }
 
-void
-RayleighScattering::readTableValue(string thisTemplate, bool usePNG, 
-                                   int color, int x, int y, 
-                                   vector<double> yaxis, 
-                                   int phase, double values[4])
+bool
+RayleighScattering::readTableValue(const string &thisTemplate, bool usePNG, int color,
+                                   size_t x0, size_t x1, size_t y0, size_t y1,
+                                   size_t rows, int phase, double values[4])
 {
+    char buffer[64];
+    const int length = snprintf(buffer, sizeof(buffer), thisTemplate.c_str(), phase);
+    if (length < 0 || static_cast<size_t>(length) >= sizeof(buffer)) return false;
+
+    const string key(buffer);
+    const size_t columns = incidence_.size();
+    const size_t x[] = { x0, x1, x0, x1 };
+    const size_t y[] = { color * rows + y0, color * rows + y0,
+                         color * rows + y1, color * rows + y1 };
     if (usePNG)
     {
-        map<int, Image *>::iterator it = PNGTable_.find(phase);
-        Image *image = NULL;
-        if (it->second == NULL)
+        map<string, Image *>::iterator it = PNGTable_.find(key);
+        if (it == PNGTable_.end())
         {
-            char buffer[64];
-            snprintf(buffer, 64, thisTemplate.c_str(), phase);
-            string thisFile(buffer);
-            if (!findFile(thisFile, "scattering")) 
+            string path(key);
+            Image *image = new Image;
+            if (!findFile(path, "scattering") || !image->Read(path.c_str())
+                || image->getPNGAlpha() == NULL
+                || static_cast<size_t>(image->Width()) != columns
+                || static_cast<size_t>(image->Height()) != 3 * rows)
             {
-                ostringstream errStr;
-                errStr << "Can't load scattering file " << thisFile << "\n";
-                xpExit(errStr.str(), __FILE__, __LINE__);
+                delete image;
+                image = NULL;
+                xpWarn("Cannot read scattering table " + key + "\n", __FILE__, __LINE__);
             }
-            image = new Image();
-            if (!image->Read(thisFile.c_str()))
-            {
-                scattering_[color] = 0;
-                return;
-            }
-            it->second = image;
+            it = PNGTable_.insert(make_pair(key, image)).first;
         }
-
-        unsigned char argb[4];
-        image = it->second;
-        image->getPixel(x, y, argb+1, argb);
-        values[0] = ARGBToDouble(argb);
-        image->getPixel(x+1, y, argb+1, argb);
-        values[1] = ARGBToDouble(argb);
-        image->getPixel(x, y+1, argb+1, argb);
-        values[2] = ARGBToDouble(argb);
-        image->getPixel(x+1, y+1, argb+1, argb);
-        values[3] = ARGBToDouble(argb);
+        if (it->second == NULL) return false;
+        for (int i = 0; i < 4; ++i)
+        {
+            const size_t p = y[i] * columns + x[i];
+            unsigned char argb[4];
+            argb[0] = it->second->getPNGAlpha()[p];
+            memcpy(argb + 1, it->second->getRGBData() + 3 * p, 3);
+            values[i] = ARGBToDouble(argb);
+        }
     }
     else
     {
-        map<int, double *>::iterator it = BINTable_.find(phase);
-        double *array = NULL;
-        if (it->second == NULL)
+        map<string, double *>::iterator it = BINTable_.find(key);
+        if (it == BINTable_.end())
         {
-            char buffer[64];
-            snprintf(buffer, 64, thisTemplate.c_str(), phase);
-            string thisFile(buffer);
-            if (!findFile(thisFile, "scattering"))
-            {
-                ostringstream errStr;
-                errStr << "Can't load scattering file " << thisFile << "\n";
-                xpExit(errStr.str(), __FILE__, __LINE__);
-            }
-            array = readBinaryTable(thisFile.c_str());
+            string path(key);
+            double *array = findFile(path, "scattering")
+                ? readRayleighTable(path.c_str(), 3, columns, rows) : NULL;
             if (array == NULL)
-            {
-                scattering_[color] = 0;
-                return;
-            }
-            it->second = array;
+                xpWarn("Cannot read scattering table " + key + "\n", __FILE__, __LINE__);
+            it = BINTable_.insert(make_pair(key, array)).first;
         }
-
-        array = it->second;
-        unsigned int ipos[4];
-        ipos[0] = y * incidence_.size() + x;
-        ipos[1] = y * incidence_.size() + x+1;
-        ipos[2] = (y+1) * incidence_.size() + x;
-        ipos[3] = (y+1) * incidence_.size() + x+1;
-        unsigned int isize = 3 * yaxis.size() * incidence_.size();
-        for (int i = 0; i < 4; i++) 
-        {
-            if (isize > ipos[i]) values[i] = array[ipos[i]];
-            else values[i] = 0;
-        }
+        if (it->second == NULL) return false;
+        for (int i = 0; i < 4; ++i)
+            values[i] = it->second[y[i] * columns + x[i]];
     }
+    return true;
 }
 
 void
@@ -743,7 +693,9 @@ RayleighScattering::calcScattering(double inc, double yValue, double phase,
 {
     double deg_to_rad = M_PI / 180;
 
-    if (inc < incidence_.front() || inc > incidence_.back() \
+    if (incidence_.empty() || yaxis.empty()
+        || !isfinite(inc) || !isfinite(yValue) || !isfinite(phase)
+        || inc < incidence_.front() || inc > incidence_.back()
         || yValue < yaxis.front() || yValue > yaxis.back())
     {
         scattering_[color] = 0;
@@ -758,36 +710,40 @@ RayleighScattering::calcScattering(double inc, double yValue, double phase,
     int phase_hi = ceil(phase_deg);
     if (phase_hi - phase_deg < 1e-3) phase_hi = phase_lo+1;
 
-    vector<double>::iterator inc_hi, inc_lo;
-    // lower_bound returns first element greater than or equal to value
-    inc_lo = lower_bound(incidence_.begin(), incidence_.end(), inc);
-    if (inc_lo > incidence_.begin()) inc_lo--;
-    // upper_bound returns first element greater than value
-    inc_hi = upper_bound(incidence_.begin(), incidence_.end(), inc);
+    vector<double>::iterator inc_hi = upper_bound(incidence_.begin(), incidence_.end(), inc);
+    vector<double>::iterator inc_lo = inc_hi - 1;
+    vector<double>::iterator y_hi = upper_bound(yaxis.begin(), yaxis.end(), yValue);
+    vector<double>::iterator y_lo = y_hi - 1;
+    if (inc_hi == incidence_.end()) inc_hi = inc_lo;
+    if (y_hi == yaxis.end()) y_hi = y_lo;
 
-    vector<double>::iterator y_hi, y_lo;
-    y_lo = lower_bound(yaxis.begin(), yaxis.end(), yValue);
-    if (y_lo > yaxis.begin()) y_lo--;
-    y_hi = upper_bound(yaxis.begin(), yaxis.end(), yValue);
-
-    int x = inc_lo - incidence_.begin();
-    double xFrac = (*inc_hi == *inc_lo ? 0 : (inc - *inc_lo) / (*inc_hi - *inc_lo));
-    int y = y_lo - yaxis.begin();
-    double yFrac = (*y_hi == *y_lo ? 0 : (yValue - *y_lo) / (*y_hi - *y_lo));
+    const size_t x0 = inc_lo - incidence_.begin();
+    const size_t x1 = inc_hi - incidence_.begin();
+    const double xFrac = (*inc_hi == *inc_lo ? 0 : (inc - *inc_lo) / (*inc_hi - *inc_lo));
+    const size_t y0 = y_lo - yaxis.begin();
+    const size_t y1 = y_hi - yaxis.begin();
+    const double yFrac = (*y_hi == *y_lo ? 0 : (yValue - *y_lo) / (*y_hi - *y_lo));
 
     double weight[4];
     getWeights(xFrac, 1-yFrac, weight);
 
-    y += color * yaxis.size();
-
     double values[4];
-
-    readTableValue(thisTemplate, usePNG, color, x, y, yaxis, phase_lo, values);
+    if (!readTableValue(thisTemplate, usePNG, color, x0, x1, y0, y1,
+                        yaxis.size(), phase_lo, values))
+    {
+        scattering_[color] = 0;
+        return;
+    }
     double loPhase = 0;
     for (int i = 0; i < 4; i++) 
         loPhase += weight[i] * values[i];
 
-    readTableValue(thisTemplate, usePNG, color, x, y, yaxis, phase_hi, values);
+    if (!readTableValue(thisTemplate, usePNG, color, x0, x1, y0, y1,
+                        yaxis.size(), phase_hi, values))
+    {
+        scattering_[color] = 0;
+        return;
+    }
     double hiPhase = 0;
     for (int i = 0; i < 4; i++) 
         hiPhase += weight[i] * values[i];

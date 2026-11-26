@@ -35,8 +35,8 @@ private:
     std::vector<double> phaseDeg_;
     std::vector<double> lambda_;
 
-    std::map<int, Image *> PNGTable_;
-    std::map<int, double *> BINTable_;
+    std::map<std::string, Image *> PNGTable_;
+    std::map<std::string, double *> BINTable_;
 
     bool diskPNG_;
     std::string diskTemplate_;
@@ -53,13 +53,10 @@ private:
                         int color, std::vector<double> yaxis, 
                         std::string thisTemplate, bool usePNG);
 
-    double * readBinaryTable(const char *filename);
-
     void readConfigFile(std::string configFile);
 
-    void readTableValue(std::string thisTemplate, bool usePNG,
-                        int color, int x, int y, 
-                        std::vector<double> yaxis, 
+    bool readTableValue(const std::string &thisTemplate, bool usePNG, int color,
+                        size_t x0, size_t x1, size_t y0, size_t y1, size_t rows,
                         int phase, double values[4]);
 
     bool readBlock(std::ifstream &inFile, 
