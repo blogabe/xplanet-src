@@ -108,8 +108,9 @@ am__v_AR_0 = @echo "  AR      " $@;
 am__v_AR_1 = 
 libimage_a_AR = $(AR) $(ARFLAGS)
 libimage_a_LIBADD =
-am__libimage_a_SOURCES_DIST = Image.cpp Image.h ImageReadLimits.h ReadImage.cpp \
-	WriteImage.cpp bmp.c gif.c jpeg.c png.c pnm.c tiff.c
+am__libimage_a_SOURCES_DIST = Image.cpp Image.h ImageReadLimits.h \
+	ReadImage.cpp WriteImage.cpp bmp.c gif.c jpeg.c png.c pnm.c \
+	tiff.c
 am__objects_1 = ReadImage.$(OBJEXT)
 am__objects_2 = WriteImage.$(OBJEXT)
 am__objects_3 = bmp.$(OBJEXT)
@@ -223,8 +224,6 @@ ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
-FREETYPE2_CFLAGS = @FREETYPE2_CFLAGS@
-FREETYPE2_LIBS = @FREETYPE2_LIBS@
 FREETYPE_CFLAGS = @FREETYPE_CFLAGS@
 FREETYPE_LIBS = @FREETYPE_LIBS@
 GRAPHICS_LIBS = @GRAPHICS_LIBS@

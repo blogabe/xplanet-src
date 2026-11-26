@@ -7015,7 +7015,7 @@ if test "$with_aqua" = yes; then
 
 printf "%s\n" "#define HAVE_AQUA /**/" >>confdefs.h
 
-  AQUA_LIBS="-framework IOKit -framework Carbon -framework Cocoa -bind_at_load"
+  AQUA_LIBS="-framework IOKit -framework Carbon -framework Cocoa"
 
 
   OBJC="gcc"

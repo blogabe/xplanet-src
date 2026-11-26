@@ -293,7 +293,7 @@ AC_ARG_WITH(aqua,AC_HELP_STRING([--with-aqua],[For Mac OS X Aqua (NO)]))
 
 if test "$with_aqua" = yes; then
   AC_DEFINE(HAVE_AQUA,,Define for Mac OS X)
-  AQUA_LIBS="-framework IOKit -framework Carbon -framework Cocoa -bind_at_load"
+  AQUA_LIBS="-framework IOKit -framework Carbon -framework Cocoa"
   AC_SUBST(AQUA_LIBS)
 
   OBJC="gcc"
