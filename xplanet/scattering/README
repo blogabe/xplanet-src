@@ -1,16 +1,32 @@
-Rayleigh scattering is implented using lookup tables.  Tables are
-calculated for fixed phase angles (the observer - point - sun angle).
-For lines of sight intersecting the disk, the tables are a 2D array of
-scattering intensities tabulated as a function of incidence (the
-zenith angle of the sun seen from the point of interest) and emission
-(the zenith angle of the observer seen from the point of interest)
-angles. 
+Try Earth's atmospheric glow in an isolated globe render
+======================================================
 
-The lookup tables can be calculated using the sample scattering file
-in the xplanet distribution:
+The Rayleigh effect is drawn on the spherical globe, not on a projected
+world map such as Lambert. Omit the -projection option. The shipped
+earthRayleigh file is a recipe, not a set of lookup tables.
 
-xplanet -create_scattering_tables earthRayleigh -verbosity 1
+From a new scratch directory, copy the installed earthRayleigh file
+into a scattering subdirectory and generate the tables there:
 
-The comments in the scattering file describe its format.  Once the
-tables have been created, place them in the xplanet/scattering
-directory.
+    mkdir scattering
+    cp /path/to/share/xplanet/scattering/earthRayleigh scattering/
+    (cd scattering && xplanet -create_scattering_tables ./earthRayleigh)
+
+This takes a few minutes and writes the tables to the current directory.
+Keep the recipe and tables together. Create atmosphere.conf:
+
+    [earth]
+    rayleigh_file=earthRayleigh
+    rayleigh_scale=10
+    rayleigh_limb_scale=4
+
+Render an off-center sunlit globe to see the effect:
+
+    xplanet -searchdir "$PWD" -config "$PWD/atmosphere.conf" \
+      -target earth -date 20260320.120000 -longitude 115 -latitude 0 \
+      -geometry 1200x720 -radius 75 -starfreq 0 \
+      -num_times 1 -output atmosphere.png
+
+To compare, repeat with a config containing only [earth]. The limb scale of 4
+exaggerates the atmosphere to show it at preview size; 1 is the default.
+This writes a file only and does not change an existing wallpaper.

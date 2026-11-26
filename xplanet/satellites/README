@@ -1,3 +1,10 @@
+The bundled iss.tle contains historical data for examples, not live tracking.
+Use fresh TLEs for current positions: https://celestrak.org/NORAD/elements/
+Keep your active TLEs and the matching marker definitions in a separate
+search directory. The renderer can resolve the bundled iss.png icon
+without copying it into that directory. Both five-digit and Alpha-5 TLE
+catalog IDs are supported.
+
 A sample TLE entry for the International Space Station looks like
 this:
 

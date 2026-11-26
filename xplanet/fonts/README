@@ -1,2 +1,6 @@
-The FreeMonoBold font is from http://www.nongnu.org/freefont and is
+The FreeMonoBold font is from https://www.gnu.org/software/freefont/ and is
 released under the GPL.
+
+To use the bundled font, add -label -font FreeMonoBold.ttf. A
+FreeType-enabled build is needed. To use your own font, pass its path
+with -font, or put it in the fonts subdirectory of a -searchdir.

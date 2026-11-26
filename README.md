@@ -35,9 +35,8 @@ xplanet -target earth -projection rectangular -geometry 1200x600 \
 
 This writes `earth.png` in the current directory using the bundled Earth map.
 Add `-date 20261125.120000` to render at noon UTC on November 25, 2026. A date
-without a time means midnight UTC. Use `-projection orthographic` to see Earth
-as a globe. For bodies with
-no bundled texture, supply your own map. See `man xplanet` for options and the
+without a time means midnight UTC. Omit `-projection` to render a 3D globe.
+For bodies with no bundled texture, supply your own map. See `man xplanet` for options and the
 bundled [configuration examples](xplanet/config/) for choosing maps, labels and
 overlays. The bundled ISS orbital elements are historical examples of the TLE
 format. Use current orbital elements for live tracking.
@@ -55,6 +54,29 @@ Unknown options return an error; `-help` lists the available options.
 The old, unimplemented `-XYZ_file` option is not supported; use
 `-origin_file` for supported origin records. Corrected vector normalization
 can slightly change pixels in some planetary views.
+
+## Try another scene
+
+Catalog stars are visible in the sky around a globe, not on a map that
+fills the frame. Omit the projection option to render a globe:
+
+```sh
+xplanet -target earth -date 20260320.120000 -geometry 1200x720 \
+  -range 8 -radius 38 -starmap BSC -starfreq 0 -num_times 1 -output earth-with-stars.png
+```
+
+`BSC` is based on the [Bright Star Catalogue, 5th Revised Edition](https://cdsarc.cds.unistra.fr/viz-bin/cat/V/50).
+The globe already uses `BSC` by default; `-starmap` can select a different
+catalog. `-starfreq 0` disables random dots where supported, not catalog stars. Add
+`-label -font FreeMonoBold.ttf` with a FreeType-enabled build to use the
+bundled label font. Local assets can be supplied with `-searchdir`; there
+is no need to copy the distributed catalog or font into your configuration.
+
+For more options, see [Earth's atmosphere](xplanet/scattering/README),
+[historical flybys](xplanet/origin/README), [a Voyager viewpoint](xplanet/spice/README)
+or [higher-precision planetary positions](xplanet/ephemeris/README).
+Use [current orbital elements](xplanet/satellites/README) for live
+Earth satellite overlays.
 
 ## What’s new in 1.4.0
 

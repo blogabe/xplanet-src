@@ -1,17 +1,45 @@
+A fixed-date example: Earth from Voyager 1
+==========================================
+
+Use a binary that lists CSPICE in xplanet -version. Download de442s.bsp
+and vgr1.x2100.bsp from JPL/NAIF. Put both in a new scratch directory's
+spice subdirectory:
+
+  https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/de442s.bsp
+  https://naif.jpl.nasa.gov/pub/naif/VOYAGER/kernels/spk/vgr1.x2100.bsp
+
+From that scratch directory:
+
+    touch spice/voyager-preview
+    printf '%s\n' "$PWD/spice/de442s.bsp" "$PWD/spice/vgr1.x2100.bsp" \
+      > spice/voyager-preview.krn
+    xplanet -searchdir "$PWD" -spice_file voyager-preview \
+      -spice_ephemeris 399 -origin naif-31 -target earth \
+      -date 20261118.101607 -geometry 960x540 -radius 32 \
+      -starmap BSC -starfreq 0 -num_times 1 -output voyager-earth.png
+
+NAIF ID -31 is Voyager 1 and 399 is Earth. This is a rendered viewpoint,
+not a spacecraft photograph: -radius enlarges Earth so it can be seen.
+The empty annotation file loads the associated kernel-list file without
+drawing a spacecraft label. Both kernels must cover the chosen date.
+
+Older mission examples and formats
+==================================
+
 To compile Xplanet with spice support, use the --with-cspice option
 with the configure script.  The location of the header files should be
 in your CPPFLAGS environment variable and the location of libcspice.a
 should be in the LIBS environment variable.
 
 The source code for the SPICE toolkit may be found at
-ftp://naif.jpl.nasa.gov/pub/naif/toolkit
+https://naif.jpl.nasa.gov/pub/naif/toolkit
 Remember to rename or copy cspice.a to libcspice.a so that the
 configure script will find it.
 
 SPICE kernels and other files go in this directory, or in a
 subdirectory named "spice" of a directory specified by -searchdir.
 Files for many missions may be found at
-ftp://naif.jpl.nasa.gov/pub/naif
+https://naif.jpl.nasa.gov/pub/naif
 
 Most people will probably be interested in SPK (Spacecraft Kernel)
 files for each mission.  Other files of interest are the leapsecond
