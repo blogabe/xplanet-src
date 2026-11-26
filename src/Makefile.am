@@ -15,6 +15,7 @@ xplanet_SOURCES = \
 	Map.cpp			\
 	Map.h			\
 	MapReduction.h		\
+	OrbitMath.h		\
 	Options.cpp		\
 	Options.h		\
 	PlanetProperties.h	\

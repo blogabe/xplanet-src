@@ -31,6 +31,7 @@ extern char **environ;
 #endif
 
 #include "Options.h"
+#include "OrbitMath.h"
 #include "xpUtil.h"
 
 void 
@@ -171,11 +172,7 @@ ndot(const double a[3], const double b[3])
 double
 normalize(double a[3])
 {
-    const double length = dot(a, a);
-    if (length > 0)
-        for (int i = 0; i < 3; i++) a[i] /= length;
-
-    return(length);
+    return normalizeVector(a);
 }
 
 void
@@ -605,15 +602,7 @@ calcGreatArc(const double lat1, const double lon1,
 double
 kepler(const double e, double M)
 {
-    double E = M = fmod(M, TWO_PI);
-    double delta = 1;
-
-    while (fabs(delta) > 1E-10)
-    {
-        delta = (M + e * sin(E) - E)/(1 - e * cos(E));
-        E += delta;
-    }
-    return(E);
+    return ellipticAnomaly(e, fmod(M, TWO_PI));
 }
 
 //  Precess rectangular coordinates in B1950 frame to J2000 using

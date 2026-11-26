@@ -50,7 +50,7 @@ nobase_dist_data_DATA = \
 	xplanet/spice/voyager.krn	\
 	xplanet/stars/BSC
 
-EXTRA_DIST = xplanet.1 $(sources) LICENSE README.md prepare-build.sh tests/README.md tests/tle_catalog.c tests/map_reduction.cpp tests/image_read.cpp tests/rayleigh_table.cpp tests/check-renderer.sh
+EXTRA_DIST = xplanet.1 $(sources) LICENSE README.md prepare-build.sh tests/README.md tests/tle_catalog.c tests/map_reduction.cpp tests/image_read.cpp tests/rayleigh_table.cpp tests/orbit_math.cpp tests/check-renderer.sh
 
 check-local:
 	@set -e; \
@@ -70,5 +70,8 @@ check-local:
 	  (cd "$$tmp" && ./image-read); \
 	  $(CXX) $(CPPFLAGS) $(CXXFLAGS) -I"$(abs_srcdir)/src" \
 	    "$(abs_srcdir)/tests/rayleigh_table.cpp" -o "$$tmp/rayleigh-table"; \
-	  (cd "$$tmp" && ./rayleigh-table)
+	  (cd "$$tmp" && ./rayleigh-table); \
+	  $(CXX) $(CPPFLAGS) $(CXXFLAGS) -I"$(abs_srcdir)/src" \
+	    "$(abs_srcdir)/tests/orbit_math.cpp" -o "$$tmp/orbit-math"; \
+	  "$$tmp/orbit-math"
 	$(SHELL) "$(abs_srcdir)/tests/check-renderer.sh" "$(abs_builddir)/src/xplanet" "$(abs_srcdir)/xplanet"

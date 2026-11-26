@@ -9,6 +9,7 @@ using namespace std;
 #include "keywords.h"
 #include "PlanetProperties.h"
 #include "Options.h"
+#include "OrbitMath.h"
 #include "readOriginFile.h"
 #include "Separation.h"
 #include "xpUtil.h"
@@ -360,9 +361,9 @@ setOriginXYZ(PlanetProperties *planetProperties[])
 
         if (options->OriginMode() == BELOW)
         {
-            oX -= 2 * (oX - pX);
-            oY -= 2 * (oY - pY);
-            oZ -= 2 * (oZ - pZ);
+            oX = reflectedCoordinate(pX, oX);
+            oY = reflectedCoordinate(pY, oY);
+            oZ = reflectedCoordinate(pZ, oZ);
         }
     }
     break;

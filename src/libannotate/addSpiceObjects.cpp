@@ -10,6 +10,7 @@ using namespace std;
 #include "findFile.h"
 #include "keywords.h"
 #include "Options.h"
+#include "OrbitMath.h"
 #include "parse.h"
 #include "sphericalToPixel.h"
 #include "View.h"
@@ -243,21 +244,13 @@ readSpiceFile(const char *line,
             break;
         case TRAIL:
         {
-            checkLocale(LC_NUMERIC, "C");
-            if (sscanf(returnString, "%lf,%lf,%lf", &trailStart, &trailEnd,
-                       &trailInterval) != 3 || !std::isfinite(trailStart)
-                || !std::isfinite(trailEnd) || !std::isfinite(trailInterval)
-                || trailInterval <= 0 || trailStart > trailEnd)
+            if (!parseTrailWindow(returnString, 36525.0, 1e-4,
+                                  trailStart, trailEnd, trailInterval))
             {
-                xpWarn("trail{} requires an ordered start and end and a positive interval.\n",
-                       __FILE__, __LINE__);
+                xpWarn("trail{} requires an ordered start and end and a positive interval, "
+                       "within supported trail limits.\n", __FILE__, __LINE__);
                 syntaxError = true;
             }
-            else
-            {
-                if (trailInterval < 1e-4) trailInterval = 1e-4;
-            }
-            checkLocale(LC_NUMERIC, "");
         }
         break;
         case TRANSPARENT:

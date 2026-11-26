@@ -13,6 +13,7 @@ using namespace std;
 #include "findFile.h"
 #include "keywords.h"
 #include "Options.h"
+#include "OrbitMath.h"
 #include "parse.h"
 #include "PlanetProperties.h"
 #include "Satellite.h"
@@ -266,10 +267,9 @@ readSatelliteFile(const char *line, Planet *planet,
 
             if (syntaxError) break;
 
-            if (sscanf(++ptr, "%d,%d,%d", &trailStart, &trailEnd,
-                       &trailInterval) != 3 || trailInterval <= 0 || trailStart > trailEnd)
+            if (!parseTrailWindow(ptr + 1, 1000000, 1, trailStart, trailEnd, trailInterval))
             {
-                xpWarn("trail{} requires a type, an ordered start and end, and a positive interval.\n",
+                xpWarn("trail{} requires a type, an ordered start and end, and a positive interval, within supported trail limits.\n",
                        __FILE__, __LINE__);
                 syntaxError = true;
             }
