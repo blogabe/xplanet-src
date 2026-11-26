@@ -1,4 +1,4 @@
-Unreleased input changes (version to be decided)
+Version 1.5.0 (unreleased)
 	* Read CelesTrak-style OMM CSV alongside existing TLE and
 	  Alpha-5 input, with decimal catalog IDs up to nine digits.
 

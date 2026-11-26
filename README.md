@@ -22,7 +22,8 @@ xplanet -version
 The fully qualified formula name selects this tap instead of Homebrew's core
 formula. The tap builds the renderer from a packaged source archive, so
 Subversion is not needed. It currently installs the maintained `1.3.1.225`
-build, not the `1.4.0` work in this repository.
+build. The 1.5.0 development work described here is not available through
+the tap.
 
 ## Render an image
 
@@ -112,6 +113,12 @@ or [higher-precision planetary positions](xplanet/ephemeris/README).
 Use [current orbital elements](xplanet/satellites/README) for live
 Earth satellite overlays.
 
+## What’s new in 1.5.0 (unreleased)
+
+- Track satellites with OMM CSV and catalog IDs up to nine digits. Existing
+  TLE and Alpha-5 setups still work.
+- Check a scene before rendering with `-validate` and get a JSON report.
+
 ## What’s new in 1.4.0
 
 - Alpha-5 catalog IDs work in satellite element files.
@@ -122,7 +129,7 @@ Earth satellite overlays.
 - Existing setups should review the output-path and missing-map behavior
   above. X11 is no longer supported in this fork.
 
-## Platform support in 1.4.0
+## Platform support
 
 - **macOS (Apple silicon):** Render to a file or use the Aqua backend for
   wallpaper. If macOS asks whether the app launching Xplanet can control
