@@ -152,3 +152,10 @@ kill "$live_pid"
 wait "$live_pid" 2>/dev/null || :
 live_pid=
 printf '%s\n' 'Required map failure and refresh recovery passed'
+
+TZ=Pacific/Honolulu render -label -utclabel -date_format '%Y %Z' \
+    -num_times 2 -wait 0 -output tz.png \
+    -post_command 'printf "%s\n" "$TZ" >> tz.log'
+printf '%s\n' Pacific/Honolulu Pacific/Honolulu > expected-tz
+cmp expected-tz tz.log
+printf '%s\n' 'Label timezone restoration passed'

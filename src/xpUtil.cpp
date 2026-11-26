@@ -99,6 +99,26 @@ removeFromEnvironment(const char *name)
 #endif
 }
 
+ScopedTimeZone::ScopedTimeZone(const char *zone)
+    : hadPrevious_(false), changed_(false)
+{
+    if (zone == NULL) return;
+    const char *current = getenv("TZ");
+    hadPrevious_ = current != NULL;
+    if (hadPrevious_) previous_ = current;
+    changed_ = (setenv("TZ", zone, 1) == 0);
+    if (changed_) tzset();
+}
+
+ScopedTimeZone::~ScopedTimeZone()
+{
+    if (!changed_) return;
+    if (hadPrevious_) setenv("TZ", previous_.c_str(), 1);
+    else removeFromEnvironment("TZ");
+    tzset();
+}
+
+
 void
 unlinkFile(const char *name)
 {
@@ -309,23 +329,8 @@ get_tv_sec(double jd)
 #ifdef HAVE_TIMEGM
     time_t returnval = timegm(&tm_struct);
 #else
-    string tz_save = "";
-    char *get_tz = getenv("TZ");
-    if (get_tz != NULL)
-    {
-        tz_save = "TZ=";
-        tz_save += get_tz;
-    }
-    putenv("TZ=UTC");
-    tzset();
-
+    ScopedTimeZone timezone("UTC");
     time_t returnval = mktime(&tm_struct);
-
-    if (tz_save.empty()) 
-        removeFromEnvironment("TZ"); 
-    else
-        putenv((char *) tz_save.c_str()); 
-    tzset();
 #endif
     return(returnval);
 }
@@ -614,94 +619,60 @@ photoFunction(const double x)
     return(sqrt(x));
 }
 
-static void
+static bool
 convertEncoding(const bool toNative, ICONV_CONST char *inBuf, char *outBuf)
 {
+    const size_t length = strlen(inBuf);
+    if (length >= MAX_LINE_LENGTH) return false;
 #ifdef NO_ICONV
-    memcpy(outBuf, inBuf, MAX_LINE_LENGTH);
+    memcpy(outBuf, inBuf, length + 1);
+    return true;
 #else
 #ifdef HAVE_LIBCHARSET
     const char *encoding = locale_charset();
 #else
     const char *encoding = nl_langinfo(CODESET);
 #endif
-    const char *fromCode = (toNative ? "UTF-8" : encoding);
-    const char *toCode =   (toNative ? encoding : "UTF-8");
+    const char *fromCode = toNative ? "UTF-8" : encoding;
+    const char *toCode = toNative ? encoding : "UTF-8";
     iconv_t conv = iconv_open(toCode, fromCode);
-    if (conv != (iconv_t) -1)
-    {
-        size_t inbytesleft = strlen(inBuf);
-        size_t outbytesleft = MAX_LINE_LENGTH;
-        while (inbytesleft != (size_t) 0)
-        {
-            size_t retVal = iconv(conv, &inBuf, &inbytesleft, 
-                                  &outBuf, &outbytesleft);
-            if (retVal == (size_t) -1)
-            {
-                ostringstream errStr;
-                errStr << "Can't convert sequence " << inBuf 
-                       << " from encoding " << fromCode
-                       << " to encoding " << toCode << endl;
-                switch (errno)
-                {
-                case EINVAL:
-                    errStr << "Incomplete character or shift sequence "
-                           << "(EINVAL)\n";
-                    break;
-                case E2BIG:
-                    errStr << "Lack of space in output buffer (E2BIG)\n";
-                    break;
-                case EILSEQ:
-                    errStr << "Illegal character or shift sequence "
-                           << "(EILSEQ)\n";
-                    break;
-                case EBADF:
-                    errStr << "Invalid conversion descriptor (EBADF)\n";
-                    break;
-                default:
-                    errStr << "Unknown iconv error\n";
-                }
-                xpWarn(errStr.str(), __FILE__, __LINE__);
-                iconv_close(conv);
-                return;
-            }
-        }
-        iconv_close(conv);
-    }
-    else
-    {
-        ostringstream errStr;
-        errStr << "iconv_open() failed, fromCode is " << fromCode 
-               << ", toCode is " << toCode << "\n";
-        xpWarn(errStr.str(), __FILE__, __LINE__);
-    }
+    if (conv == (iconv_t) -1) return false;
+
+    size_t inputLeft = length;
+    size_t outputLeft = MAX_LINE_LENGTH - 1;
+    const bool ok = iconv(conv, &inBuf, &inputLeft, &outBuf, &outputLeft) != (size_t) -1
+        && inputLeft == 0
+        && iconv(conv, NULL, NULL, &outBuf, &outputLeft) != (size_t) -1;
+    *outBuf = '\0';
+    iconv_close(conv);
+    return ok;
 #endif
 }
 
 void
 strftimeUTF8(string &timeString)
 {
-    // This is the input string, with formatting characters
-    char buffer_UTF8[MAX_LINE_LENGTH];
-    memset(buffer_UTF8, 0, MAX_LINE_LENGTH);
-    strncpy(buffer_UTF8, timeString.c_str(), MAX_LINE_LENGTH);
+    if (timeString.empty()) return;
+    char utf8[MAX_LINE_LENGTH];
+    char format[MAX_LINE_LENGTH];
+    char native[MAX_LINE_LENGTH];
+    time_t seconds = Options::getInstance()->TVSec();
+    const tm *local = localtime(&seconds);
 
-    // Convert to native encoding
-    char buffer_native_format[MAX_LINE_LENGTH];
-    memset(buffer_native_format, 0, MAX_LINE_LENGTH);
-    convertEncoding(true, buffer_UTF8, buffer_native_format);
-
-    // Run it through strftime()
-    char buffer_native[MAX_LINE_LENGTH];
-    Options *options = Options::getInstance();
-    time_t tv_sec = options->TVSec();
-    strftime(buffer_native, MAX_LINE_LENGTH, 
-             buffer_native_format, 
-             localtime((time_t *) &tv_sec));
-
-    // Convert back to UTF8
-    convertEncoding(false, buffer_native, buffer_UTF8);
-    timeString.assign(buffer_UTF8);
+    if (timeString.size() >= sizeof(utf8) || local == NULL)
+    {
+        timeString.clear();
+        return;
+    }
+    memcpy(utf8, timeString.c_str(), timeString.size() + 1);
+    if (!convertEncoding(true, utf8, format)
+        || strftime(native, sizeof(native), format, local) == 0
+        || !convertEncoding(false, native, utf8))
+    {
+        timeString.clear();
+        return;
+    }
+    timeString.assign(utf8);
 }
 
 char *

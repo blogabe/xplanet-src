@@ -56,6 +56,20 @@ extern void rotateZ(double &X, double &Y, double &Z, const double theta);
 
 extern void removeFromEnvironment(const char *name);
 
+class ScopedTimeZone
+{
+public:
+    explicit ScopedTimeZone(const char *zone);
+    ~ScopedTimeZone();
+
+private:
+    ScopedTimeZone(const ScopedTimeZone &);
+    ScopedTimeZone &operator=(const ScopedTimeZone &);
+    std::string previous_;
+    bool hadPrevious_;
+    bool changed_;
+};
+
 extern void unlinkFile(const char *name);
 
 extern void getWeights(const double t, const double u, double weights[4]);

@@ -215,32 +215,9 @@ DisplayBase::drawLabel(PlanetProperties *planetProperties[])
     }
     else
     {
-        char *tzEnv = getenv("TZ");
-        string tzSave("");
-        if (options->DrawUTCLabel())
-        {
-            if (tzEnv != NULL)
-            {
-                tzSave = "TZ=";
-                tzSave += tzEnv;
-            }
-            putenv((char *) "TZ=UTC");
-            tzset();
-        }
-
+        ScopedTimeZone timezone(options->DrawUTCLabel() ? "UTC" : NULL);
         timeString.assign(options->DateFormat());
-
-        // run date string through strftime() and convert to UTF-8
         strftimeUTF8(timeString);
-
-        if (options->DrawUTCLabel())
-        {
-            if (tzEnv == NULL)
-                removeFromEnvironment("TZ"); 
-            else
-                putenv((char *) tzSave.c_str()); 
-            tzset();
-        }       
     }
 
     if (!lookAt.empty()) labelLines.push_back(lookAt);

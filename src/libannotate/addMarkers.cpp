@@ -360,32 +360,13 @@ readMarkerFile(const char *line, Planet *planet, const double pR,
         // timezone is defined, run the name string through strftime()
         if (name.find("%") != string::npos && !timezone.empty())
         {
-            const char *tzEnv = getenv("TZ");
-            string tzSave;
-            if (tzEnv != NULL)
-            {
-                tzSave = "TZ=";
-                tzSave += tzEnv;
-            }
-
-            string tz = "TZ=";
-            tz += timezone;
-            putenv((char *) tz.c_str());
-
-            tzset();
+            ScopedTimeZone markerTimezone(timezone.c_str());
 
             if (!lang.empty())
                 checkLocale(LC_ALL, lang.c_str());
 
             // run name string through strftime() and convert to UTF-8
             strftimeUTF8(name);
-
-            if (tzEnv == NULL) 
-                removeFromEnvironment("TZ"); 
-            else
-                putenv((char *) tzSave.c_str()); 
-
-            tzset();
 
             if (!lang.empty())
                 checkLocale(LC_ALL, "");
