@@ -59,6 +59,75 @@ od -An -v -tu1 -j54 solid.bmp | awk '
 '
 printf '%s\n' 'Fixed-date render matches all expected RGB pixels'
 
+# Lossless 16x8 RGB PNG fixtures. The two latitude bands and four longitude
+# bands have eight distinct colors; the other texture is black. No image
+# conversion utility is needed at test time.
+printf '%b' '\0211\0120\0116\0107\0015\0012\0032\0012\0000\0000\0000\0015\0111\0110\0104\0122' \
+    '\0000\0000\0000\0020\0000\0000\0000\0010\0010\0002\0000\0000\0000\0177\0024\0350' \
+    '\0300\0000\0000\0000\0064\0111\0104\0101\0124\0170\0332\0143\0120\0132\0270\0027' \
+    '\0216\0226\0032\0124\0303\0121\0301\0036\0073\0070\0332\0023\0335\0007\0107\0014' \
+    '\0203\0120\0303\0042\0043\0031\0070\0122\0231\0146\0017\0107\0136\0332\0353\0340' \
+    '\0150\0127\0253\0016\0034\0015\0102\0015\0000\0176\0242\0245\0141\0370\0132\0171' \
+    '\0056\0000\0000\0000\0000\0111\0105\0116\0104\0256\0102\0140\0202' > asymmetric.png
+printf '%b' '\0211\0120\0116\0107\0015\0012\0032\0012\0000\0000\0000\0015\0111\0110\0104\0122' \
+    '\0000\0000\0000\0020\0000\0000\0000\0010\0010\0002\0000\0000\0000\0177\0024\0350' \
+    '\0300\0000\0000\0000\0016\0111\0104\0101\0124\0170\0332\0143\0140\0030\0005\0203' \
+    '\0001\0000\0000\0001\0210\0000\0001\0357\0011\0342\0047\0000\0000\0000\0000\0111' \
+    '\0105\0116\0104\0256\0102\0140\0202' > dark.png
+
+render_map()
+{
+    "$binary" -searchdir "$assets" -target earth -projection rectangular \
+        -longitude 0 -latitude 0 -geometry 320x160 -date "$1" \
+        -config "$2" -num_times 1 -output "$3"
+}
+
+# The output encoder writes 24-bit BMP, padded per row (320*3 has no padding).
+# x/y are measured from the image top-left, not BMP's bottom-up byte order.
+assert_rgb()
+{
+    image=$1 x=$2 y=$3 r=$4 g=$5 b=$6
+    offset=$((54 + (159 - y) * 320 * 3 + x * 3))
+    if ! od -An -v -tu1 -j "$offset" -N3 "$image" | awk -v r="$r" -v g="$g" -v b="$b" '
+        function near(actual, expected) { return actual >= expected-5 && actual <= expected+5 }
+        NF { ok = NF == 3 && near($1,b) && near($2,g) && near($3,r); ++rows }
+        END { exit !(rows == 1 && ok) }
+    '; then
+        printf 'Unexpected %s pixel at (%s,%s): expected RGB %s %s %s; got BGR ' \
+            "$image" "$x" "$y" "$r" "$g" "$b" >&2
+        od -An -v -tu1 -j "$offset" -N3 "$image" >&2
+        return 1
+    fi
+}
+
+# Longitude centers -135/-45/45/135, and latitude centers +45/-45.
+# Explicit expected positions are independent of the rendered pixels.
+printf '[earth]\nmap=%s/asymmetric.png\nnight_map=%s/asymmetric.png\nshade=100\n' \
+    "$PWD" "$PWD" > asymmetric.conf
+render_map 20260320.120000 asymmetric.conf oriented.bmp
+assert_rgb oriented.bmp  40  40  34 161 189
+assert_rgb oriented.bmp 120  40 165  48 123
+assert_rgb oriented.bmp 200  40 112 188  62
+assert_rgb oriented.bmp 280  40 188  91 142
+assert_rgb oriented.bmp  40 120 162  50  28
+assert_rgb oriented.bmp 120 120  36 150  63
+assert_rgb oriented.bmp 200 120  74  43 174
+assert_rgb oriented.bmp 280 120 186 133  44
+printf '%s\n' 'Rectangular render preserves eight latitude/longitude color samples'
+
+# Near equinox, -45° longitude is lit at noon UTC and +135° at midnight UTC.
+# Both samples are far from the terminator, so expect the exact lit or night
+# texture (within the same tolerance), not a renderer-generated golden image.
+printf '[earth]\nmap=%s/asymmetric.png\nnight_map=%s/dark.png\nshade=0\n' \
+    "$PWD" "$PWD" > lighting.conf
+render_map 20260320.120000 lighting.conf noon.bmp
+render_map 20260320.000000 lighting.conf midnight.bmp
+assert_rgb noon.bmp     120 40 165 48 123
+assert_rgb noon.bmp     280 40   0  0   0
+assert_rgb midnight.bmp 120 40   0  0   0
+assert_rgb midnight.bmp 280 40 188 91 142
+printf '%s\n' 'Fixed dates swap the expected day and night samples'
+
 fail_output()
 {
     if render -num_times 1 -output "$1" > failure.log 2>&1; then
