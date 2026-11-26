@@ -39,7 +39,8 @@ without a time means midnight UTC. Use `-projection orthographic` to see Earth
 as a globe. For bodies with
 no bundled texture, supply your own map. See `man xplanet` for options and the
 bundled [configuration examples](xplanet/config/) for choosing maps, labels and
-overlays.
+overlays. The bundled ISS orbital elements are historical examples of the TLE
+format. Use current orbital elements for live tracking.
 
 If a write fails, Xplanet leaves the existing image intact. Use a writable
 directory and a regular output file name. The output path itself cannot

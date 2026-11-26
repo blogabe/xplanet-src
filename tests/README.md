@@ -6,12 +6,15 @@ that the executable advertises Alpha-5. A separate native check covers map
 downsampling, including square, rectangular, odd-sized and one-row maps.
 Image-read checks cover same-process reuse after an unavailable input, round
 trips for enabled readers, grayscale JPEG, and PNG alpha and bit-depth handling.
+Other native checks cover legacy Rayleigh table loading, vector and orbit math,
+and trail argument parsing.
 When PNG and JPEG are enabled, the CLI check
 also renders a fixed-date Earth scene using only the packaged data. It never
 changes the desktop or uses the current user's maps. The file-output checks
 cover replacement, preservation of the old image after an I/O error, temporary
 file cleanup, rejected destinations and frame naming. Each enabled writer is
-tested by limiting the file size in a child process.
+tested by limiting the file size in a child process. The CLI checks also cover
+refresh recovery, timezone restoration, observer files and option errors.
 
 When building from a checkout or repacked source, run `./prepare-build.sh`
 before `./configure` if timestamps would cause Make to regenerate the
