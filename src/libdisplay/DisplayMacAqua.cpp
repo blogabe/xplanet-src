@@ -19,6 +19,7 @@ using namespace std;
 
 extern "C" {
     OSStatus SetDesktopPictureFromCharString(const char *file);
+    int SetWallpaperWithAppKit(const char *file, char *failure, size_t capacity);
 }
 
 DisplayMacAqua::DisplayMacAqua(const int tr) : DisplayBase(tr)
@@ -121,14 +122,23 @@ DisplayMacAqua::renderImage(PlanetProperties *planetProperties[])
         xpMsg(msg.str(), __FILE__, __LINE__);
     }
 
-    OSStatus status = SetDesktopPictureFromCharString(output.c_str());
-    if (status != noErr)
+    const bool useFinder = options->FinderWallpaper();
+    char failure[512] = {};
+    const OSStatus status = useFinder
+        ? SetDesktopPictureFromCharString(output.c_str()) : noErr;
+    const bool published = useFinder ? status == noErr
+        : SetWallpaperWithAppKit(output.c_str(), failure, sizeof(failure)) != 0;
+    if (!published)
     {
         removeWallpaperDirectory(lastFailedWallpaper);
         lastFailedWallpaper = directory;
         ostringstream errStr;
-        errStr << "Failed to set desktop (macOS error " << status
-               << "); image retained at " << output << "\n";
+        errStr << "Failed to set desktop (";
+        if (useFinder)
+            errStr << "Finder error " << status;
+        else
+            errStr << "AppKit: " << failure;
+        errStr << "); image retained at " << output << "\n";
         if (status == errAEEventNotPermitted)
         {
             errStr << "Finder Automation access was denied. In System Settings > "
@@ -141,8 +151,8 @@ DisplayMacAqua::renderImage(PlanetProperties *planetProperties[])
         return;
     }
 
-    // Finder has acknowledged the request. Retain the existing grace period
-    // for the wallpaper display before removing the temporary image.
+    // Acceptance precedes the visible update. Leave time for macOS to import
+    // the image before removing our unique staging file.
     sleep(1);
     removeWallpaperDirectory(lastFailedWallpaper);
     lastFailedWallpaper.clear();

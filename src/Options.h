@@ -122,6 +122,7 @@ public:
     void Rotate(const double r) { rotate_ = rotate0_ + r; };
 
     const std::vector<std::string> & getSearchDir() const { return(searchdir); };
+    bool FinderWallpaper() const { return finderWallpaper_; };
     bool SaveDesktopFile() const { return(saveDesktopFile_); };
     const std::vector<int> & SpiceEphemeris() const { return(spiceEphemeris_); };
     const std::vector<std::string> & SpiceFiles() const { return(spiceFiles_); };
@@ -274,6 +275,7 @@ private:
     double rotate_;       // rotate0 plus any increments
     double rotate0_;      // rotation angle specified on command line
 
+    bool finderWallpaper_;
     bool saveDesktopFile_;
     double separationDist_; // separation from the primary target
     body separationTarget_;     // secondary target

@@ -1,7 +1,7 @@
 noinst_LIBRARIES = libdisplay.a libtimer.a
 
 if HAVE_AQUA
-  displayaqua = DisplayMacAqua.cpp DisplayMacAqua.h DesktopPicture.m
+  displayaqua = DisplayMacAqua.cpp DisplayMacAqua.h DesktopPicture.m WallpaperAppKit.m
   timeraqua = TimerMacAqua.cpp TimerMacAqua.h
 %.o: %.m
 	$(OBJC) $(OBJCFLAGS) -c $<

@@ -24,6 +24,7 @@ printVersion()
     cout << "Compiled with support for:\n";
 #ifdef HAVE_AQUA
     cout << "\tMac OS X\n";
+    cout << "\tWallpaper backends: appkit, finder\n";
 #endif
 
 #ifdef HAVE_CYGWIN

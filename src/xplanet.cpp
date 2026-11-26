@@ -83,6 +83,14 @@ main(int argc, char **argv)
 
     if (options->Fork())
     {
+#ifdef HAVE_AQUA
+        // The child continues without exec; it must not initialize AppKit.
+        if (!options->FinderWallpaper() && options->DisplayMode() != OUTPUT
+            && options->RayleighFile().empty())
+            xpExit("-fork is not supported with AppKit wallpaper. "
+                   "Run in the foreground or use a user LaunchAgent.\n",
+                   __FILE__, __LINE__);
+#endif
         pid_t pid = fork();
         switch (pid)
         {

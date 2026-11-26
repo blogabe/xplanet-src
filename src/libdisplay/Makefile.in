@@ -111,12 +111,14 @@ am__libdisplay_a_SOURCES_DIST = DisplayBase.cpp DisplayBase.h \
 	DisplayOutput.h DisplayOutput.cpp getDisplay.cpp libdisplay.h \
 	TextRenderer.cpp TextRenderer.h getTextRenderer.cpp \
 	DisplayX11.cpp DisplayX11.h vroot.h DisplayMacAqua.cpp \
-	DisplayMacAqua.h DesktopPicture.m DisplayMSWin.cpp \
-	DisplayMSWin.h TextRendererFT2.cpp TextRendererFT2.h \
-	TextRendererPangoFT2.cpp TextRendererPangoFT2.h
+	DisplayMacAqua.h DesktopPicture.m WallpaperAppKit.m \
+	DisplayMSWin.cpp DisplayMSWin.h TextRendererFT2.cpp \
+	TextRendererFT2.h TextRendererPangoFT2.cpp \
+	TextRendererPangoFT2.h
 @HAVE_LIBX11_TRUE@am__objects_1 = DisplayX11.$(OBJEXT)
 @HAVE_AQUA_TRUE@am__objects_2 = DisplayMacAqua.$(OBJEXT) \
-@HAVE_AQUA_TRUE@	DesktopPicture.$(OBJEXT)
+@HAVE_AQUA_TRUE@	DesktopPicture.$(OBJEXT) \
+@HAVE_AQUA_TRUE@	WallpaperAppKit.$(OBJEXT)
 @HAVE_CYGWIN_TRUE@am__objects_3 = DisplayMSWin.$(OBJEXT)
 @HAVE_LIBFREETYPE_TRUE@am__objects_4 = TextRendererFT2.$(OBJEXT)
 @HAVE_LIBPANGOFT2_TRUE@am__objects_5 = TextRendererPangoFT2.$(OBJEXT)
@@ -157,8 +159,8 @@ am__depfiles_remade = ./$(DEPDIR)/DesktopPicture.Po \
 	./$(DEPDIR)/TextRendererFT2.Po \
 	./$(DEPDIR)/TextRendererPangoFT2.Po ./$(DEPDIR)/Timer.Po \
 	./$(DEPDIR)/TimerMacAqua.Po ./$(DEPDIR)/TimerX11.Po \
-	./$(DEPDIR)/getDisplay.Po ./$(DEPDIR)/getTextRenderer.Po \
-	./$(DEPDIR)/getTimer.Po
+	./$(DEPDIR)/WallpaperAppKit.Po ./$(DEPDIR)/getDisplay.Po \
+	./$(DEPDIR)/getTextRenderer.Po ./$(DEPDIR)/getTimer.Po
 am__mv = mv -f
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
@@ -354,7 +356,7 @@ top_srcdir = @top_srcdir@
 xplanet_ARFLAGS = @xplanet_ARFLAGS@
 xplanet_LDFLAGS = @xplanet_LDFLAGS@
 noinst_LIBRARIES = libdisplay.a libtimer.a
-@HAVE_AQUA_TRUE@displayaqua = DisplayMacAqua.cpp DisplayMacAqua.h DesktopPicture.m
+@HAVE_AQUA_TRUE@displayaqua = DisplayMacAqua.cpp DisplayMacAqua.h DesktopPicture.m WallpaperAppKit.m
 @HAVE_AQUA_TRUE@timeraqua = TimerMacAqua.cpp TimerMacAqua.h
 @HAVE_CYGWIN_TRUE@displaymswin = DisplayMSWin.cpp DisplayMSWin.h
 @HAVE_LIBFREETYPE_TRUE@textrendererft2 = TextRendererFT2.cpp TextRendererFT2.h
@@ -456,6 +458,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Timer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/TimerMacAqua.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/TimerX11.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/WallpaperAppKit.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/getDisplay.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/getTextRenderer.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/getTimer.Po@am__quote@ # am--include-marker
@@ -629,6 +632,7 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/Timer.Po
 	-rm -f ./$(DEPDIR)/TimerMacAqua.Po
 	-rm -f ./$(DEPDIR)/TimerX11.Po
+	-rm -f ./$(DEPDIR)/WallpaperAppKit.Po
 	-rm -f ./$(DEPDIR)/getDisplay.Po
 	-rm -f ./$(DEPDIR)/getTextRenderer.Po
 	-rm -f ./$(DEPDIR)/getTimer.Po
@@ -689,6 +693,7 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/Timer.Po
 	-rm -f ./$(DEPDIR)/TimerMacAqua.Po
 	-rm -f ./$(DEPDIR)/TimerX11.Po
+	-rm -f ./$(DEPDIR)/WallpaperAppKit.Po
 	-rm -f ./$(DEPDIR)/getDisplay.Po
 	-rm -f ./$(DEPDIR)/getTextRenderer.Po
 	-rm -f ./$(DEPDIR)/getTimer.Po

@@ -22,8 +22,19 @@ xplanet -version
 The fully qualified formula name selects this tap instead of Homebrew's core
 formula. The tap builds the renderer from a packaged source archive, so
 Subversion is not needed. It currently installs the maintained `1.3.1.225`
-build. The 1.5.0 development work described here is not available through
+build. The 1.6.0 development work described here is not available through
 the tap.
+
+## macOS wallpaper
+
+On macOS, Xplanet 1.6 defaults to AppKit for wallpaper in a logged-in desktop
+session. The new backend has been tested on Apple silicon; Intel compatibility
+has not been verified. AppKit does not send Finder Automation requests. Use
+`-wallpaper_backend finder` for an explicit rollback to the legacy backend. If
+AppKit cannot publish a frame, Xplanet reports the error without switching to
+Finder. For AppKit wallpaper, run in the foreground or use a user LaunchAgent,
+not `-fork`. This does not change `-output` rendering.
+The current implementation updates the main display only.
 
 ## Render an image
 
