@@ -49,9 +49,25 @@ Image::~Image()
 bool
 Image::Read(const char *filename)
 {
-    bool success = ReadImage(filename, width_, height_, rgbData_, pngAlpha_);
-    area_ = width_ * height_;
-    return(success);
+    if (filename == NULL) return false;
+
+    int width = 0, height = 0;
+    unsigned char *rgb = NULL, *alpha = NULL;
+    if (!ReadImage(filename, width, height, rgb, alpha))
+    {
+        free(rgb);
+        free(alpha);
+        return false;
+    }
+
+    free(rgbData_);
+    free(pngAlpha_);
+    rgbData_ = rgb;
+    pngAlpha_ = alpha;
+    width_ = width;
+    height_ = height;
+    area_ = width * height;
+    return true;
 }
 
 bool

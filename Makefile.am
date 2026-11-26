@@ -50,7 +50,7 @@ nobase_dist_data_DATA = \
 	xplanet/spice/voyager.krn	\
 	xplanet/stars/BSC
 
-EXTRA_DIST = xplanet.1 $(sources) LICENSE README.md prepare-build.sh tests/README.md tests/tle_catalog.c tests/map_reduction.cpp tests/check-renderer.sh
+EXTRA_DIST = xplanet.1 $(sources) LICENSE README.md prepare-build.sh tests/README.md tests/tle_catalog.c tests/map_reduction.cpp tests/image_read.cpp tests/check-renderer.sh
 
 check-local:
 	@set -e; \
@@ -63,5 +63,9 @@ check-local:
 	  "$$tmp/tle-catalog"; \
 	  $(CXX) $(CPPFLAGS) $(CXXFLAGS) -I"$(abs_srcdir)/src" \
 	    "$(abs_srcdir)/tests/map_reduction.cpp" -o "$$tmp/map-reduction"; \
-	  "$$tmp/map-reduction"
+	  "$$tmp/map-reduction"; \
+	  $(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -I"$(abs_srcdir)/src" -I"$(abs_builddir)" \
+	    "$(abs_srcdir)/tests/image_read.cpp" "$(abs_builddir)/src/libimage/libimage.a" \
+	    $(GRAPHICS_LIBS) -o "$$tmp/image-read"; \
+	  (cd "$$tmp" && ./image-read)
 	$(SHELL) "$(abs_srcdir)/tests/check-renderer.sh" "$(abs_builddir)/src/xplanet" "$(abs_srcdir)/xplanet"

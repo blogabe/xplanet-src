@@ -24,98 +24,96 @@
 
 #include <jpeglib.h>
 
-#define MAX_DIMENSION 21600
+#include "ImageReadLimits.h"
 
-int
-read_jpeg(const char *filename, int *width, int *height, unsigned char **rgb)
-{
-    struct jpeg_decompress_struct cinfo;
-    struct jpeg_error_mgr jerr;
-    unsigned char *ptr = NULL;
-    unsigned int i, ipos;
-
-    FILE *infile = fopen(filename, "rb");
-
-    cinfo.err = jpeg_std_error(&jerr);
-    jpeg_create_decompress(&cinfo);
-    jpeg_stdio_src(&cinfo, infile);
-    jpeg_read_header(&cinfo, TRUE);
-    jpeg_start_decompress(&cinfo);
-
-    *width = cinfo.output_width;
-    *height = cinfo.output_height;
-
-    /* Prevent against integer overflow - thanks to Niels Heinen */
-    if (cinfo.output_width > MAX_DIMENSION 
-        || cinfo.output_height > MAX_DIMENSION) 
-    {
-       fprintf(stderr, "Width, height in JPEG header is %d, %d\n",
-               cinfo.output_width, cinfo.output_height);
-       return(0);
-    }
-
-    rgb[0] = malloc(3 * cinfo.output_width * cinfo.output_height);
-    if (rgb[0] == NULL)
-    {
-        fprintf(stderr, "Can't allocate memory for JPEG file.\n");
-        fclose(infile);
-        return(0);
-    }
-
-    if (cinfo.output_components == 3)
-    {
-        ptr = rgb[0];
-        while (cinfo.output_scanline < cinfo.output_height) 
-        {
-            jpeg_read_scanlines(&cinfo, &ptr, 1);
-            ptr += 3 * cinfo.output_width;
-        }
-    }
-    else if (cinfo.output_components == 1)
-    {
-        ptr = malloc(cinfo.output_width);
-        if (ptr == NULL)
-        {
-            fprintf(stderr, "Can't allocate memory for JPEG file.\n");
-            fclose(infile);
-            return(0);
-        }
-
-        ipos = 0;
-        while (cinfo.output_scanline < cinfo.output_height) 
-        {
-            jpeg_read_scanlines(&cinfo, &ptr, 1);
-
-            for (i = 0; i < cinfo.output_width; i++)
-            {
-                memset(rgb[0] + ipos, ptr[i], 3);
-                ipos += 3;
-            }
-        }
-
-        free(ptr);
-    }
-
-    jpeg_finish_decompress(&cinfo);
-    jpeg_destroy_decompress(&cinfo);
-
-    fclose(infile);
-
-    return(1);
-}
-
-struct jpeg_write_error
+struct jpeg_error_bridge
 {
     struct jpeg_error_mgr manager;
     jmp_buf jump;
 };
 
 static void
-jpeg_write_failed(j_common_ptr cinfo)
+jpeg_codec_failed(j_common_ptr cinfo)
 {
-    struct jpeg_write_error *error = (struct jpeg_write_error *) cinfo->err;
+    struct jpeg_error_bridge *error = (struct jpeg_error_bridge *) cinfo->err;
     (*cinfo->err->output_message)(cinfo);
     longjmp(error->jump, 1);
+}
+
+static void
+jpeg_read_message(j_common_ptr cinfo, int level)
+{
+    /* Do not return a partly decoded image after the library repairs bad input. */
+    if (level < 0) jpeg_codec_failed(cinfo);
+}
+
+struct jpeg_input
+{
+    struct jpeg_decompress_struct codec;
+    struct jpeg_error_bridge error;
+    unsigned char *pixels;
+};
+
+static int
+decode_jpeg(FILE *file, struct jpeg_input *input, int *width, int *height)
+{
+    struct jpeg_decompress_struct *codec = &input->codec;
+    codec->err = jpeg_std_error(&input->error.manager);
+    input->error.manager.error_exit = jpeg_codec_failed;
+    input->error.manager.emit_message = jpeg_read_message;
+    if (setjmp(input->error.jump)) return 0;
+
+    jpeg_create_decompress(codec);
+    jpeg_stdio_src(codec, file);
+    if (jpeg_read_header(codec, TRUE) != JPEG_HEADER_OK) return 0;
+    if (codec->jpeg_color_space == JCS_CMYK || codec->jpeg_color_space == JCS_YCCK)
+    {
+        fprintf(stderr, "CMYK JPEG maps are unsupported; convert to RGB.\n");
+        return 0;
+    }
+
+    size_t area;
+    codec->out_color_space = JCS_RGB;
+    jpeg_calc_output_dimensions(codec);
+    if (!image_read_area(codec->output_width, codec->output_height, &area))
+        return 0;
+    if (!jpeg_start_decompress(codec) || codec->output_components != 3)
+        return 0;
+
+    input->pixels = malloc(3 * area);
+    if (input->pixels == NULL) return 0;
+    while (codec->output_scanline < codec->output_height)
+    {
+        JSAMPROW row = input->pixels + 3 * (size_t) codec->output_width
+                                      * codec->output_scanline;
+        if (jpeg_read_scanlines(codec, &row, 1) != 1) return 0;
+    }
+
+    if (!jpeg_finish_decompress(codec)) return 0;
+    *width = codec->output_width;
+    *height = codec->output_height;
+    return 1;
+}
+
+int
+read_jpeg(const char *filename, int *width, int *height, unsigned char **rgb)
+{
+    FILE *file = fopen(filename, "rb");
+    if (file == NULL) return 0;
+    struct jpeg_input *input = calloc(1, sizeof(*input));
+    if (input == NULL)
+    {
+        fclose(file);
+        return 0;
+    }
+
+    const int ok = decode_jpeg(file, input, width, height);
+    jpeg_destroy_decompress(&input->codec);
+    fclose(file);
+    if (ok) *rgb = input->pixels;
+    else free(input->pixels);
+    free(input);
+    return ok;
 }
 
 int
@@ -123,12 +121,12 @@ write_jpeg(FILE *outfile, int width, int height, unsigned char *rgb,
            int quality)
 {
     struct jpeg_compress_struct *cinfo = calloc(1, sizeof(*cinfo));
-    struct jpeg_write_error error;
+    struct jpeg_error_bridge error;
     JSAMPROW scanline[1];
 
     if (cinfo == NULL) return 0;
     cinfo->err = jpeg_std_error(&error.manager);
-    error.manager.error_exit = jpeg_write_failed;
+    error.manager.error_exit = jpeg_codec_failed;
     if (setjmp(error.jump))
     {
         jpeg_destroy_compress(cinfo);

@@ -43,6 +43,9 @@ overlays.
 If a write fails, Xplanet leaves the existing image intact. Use a writable
 directory and a regular output file name. The output path itself cannot
 be a symlink, directory or pipe.
+For input images, the renderer accepts up to 64 Mi pixels (67,108,864 pixels),
+with neither side greater than 21,600 pixels. Convert CMYK JPEGs to RGB before
+using them as maps.
 
 ## Platform support in 1.3.2
 

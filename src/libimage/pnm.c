@@ -25,80 +25,72 @@
 
 #include <pnm.h>
 
-int
-read_pnm(const char *filename, int *width, int *height, char **rgb)
+#include "ImageReadLimits.h"
+
+struct pnm_input
 {
-    FILE *infile = fopen(filename, "rb");
+    xel *row;
+    unsigned char *pixels;
+};
 
-    xelval maxvalP;
-    int formatP;
+static unsigned char
+pnm_byte(xelval value, xelval maxval)
+{
+    return (unsigned char) (((uint64_t) value * 255 + maxval / 2) / maxval);
+}
 
-    xel **imagearray;
+static int
+decode_pnm(FILE *file, struct pnm_input *input, int *width, int *height)
+{
+    jmp_buf jump;
+    if (setjmp(jump)) return 0;
+    pm_setjmpbuf(&jump);
 
-    int argcP = 1;
-    char **argv;
+    int w, h, format;
+    xelval maxval;
+    pnm_readpnminit(file, &w, &h, &maxval, &format);
+    size_t area;
+    if (!image_read_area(w, h, &area) || maxval == 0) return 0;
 
-    int i, j, ipos = 0;
-
-    argv = malloc(sizeof(char **));
-    if (argv == NULL)
+    input->row = malloc((size_t) w * sizeof(*input->row));
+    input->pixels = malloc(3 * area);
+    if (input->row == NULL || input->pixels == NULL) return 0;
+    for (int y = 0; y < h; ++y)
     {
-        fprintf(stderr, "Can't allocate memory in read_pnm().\n");
-        return(0);
-    }
-
-    argv[0] = malloc(10);
-    if (argv[0] == NULL)
-    {
-        fprintf(stderr, "Can't allocate memory in read_pnm().\n");
-        return(0);
-    }
-
-    strcpy(argv[0], "loadimage");
-
-    pnm_init(&argcP, argv);
-
-    imagearray = pnm_readpnm(infile, width, height, &maxvalP, &formatP);
-
-    rgb[0] = malloc(3 * *width * *height);
-    if (rgb[0] == NULL)
-    {
-        fprintf(stderr, "Can't allocate memory for PNM file.\n");
-        return(0);
-    }
-
-    switch (PNM_FORMAT_TYPE(formatP))
-    {
-    case PPM_TYPE:
-        for (j = 0; j < *height; j++)
-            for (i = 0; i < *width; i++)
+        pnm_readpnmrow(file, input->row, w, maxval, format);
+        for (int x = 0; x < w; ++x)
+        {
+            unsigned char *out = input->pixels + 3 * (y * w + x);
+            const xel pixel = input->row[x];
+            if (PNM_FORMAT_TYPE(format) == PPM_TYPE)
             {
-                rgb[0][ipos++] = (unsigned char) (PPM_GETR(imagearray[j][i]) 
-                                                  & 0xff); 
-                rgb[0][ipos++] = (unsigned char) (PPM_GETG(imagearray[j][i]) 
-                                                  & 0xff); 
-                rgb[0][ipos++] = (unsigned char) (PPM_GETB(imagearray[j][i]) 
-                                                  & 0xff); 
+                out[0] = pnm_byte(PPM_GETR(pixel), maxval);
+                out[1] = pnm_byte(PPM_GETG(pixel), maxval);
+                out[2] = pnm_byte(PPM_GETB(pixel), maxval);
             }
-        break;
-    case PGM_TYPE:
-    case PBM_TYPE:
-        for (j = 0; j < *height; j++)
-            for (i = 0; i < *width; i++)
-            {
-                memset(rgb[0] + ipos, 
-                       (unsigned char) (PNM_GET1(imagearray[j][i]) & 0xff), 
-                       3);
-                ipos +=3;
-            }
-        break;
-    default:
-        fprintf(stderr, "Unknown magic number for pnm file\n");
-        return(0);
+            else
+                out[0] = out[1] = out[2] = pnm_byte(PNM_GET1(pixel), maxval);
+        }
     }
 
-    pnm_freearray(imagearray, *height);
-    return(1);
+    *width = w;
+    *height = h;
+    return 1;
+}
+
+int
+read_pnm(const char *filename, int *width, int *height, unsigned char **rgb)
+{
+    FILE *file = fopen(filename, "rb");
+    if (file == NULL) return 0;
+    struct pnm_input input = { NULL, NULL };
+    const int ok = decode_pnm(file, &input, width, height);
+    pm_setjmpbuf(NULL);
+    fclose(file);
+    free(input.row);
+    if (ok) *rgb = input.pixels;
+    else free(input.pixels);
+    return ok;
 }
 
 int

@@ -4,6 +4,8 @@ After configuring and building Xplanet, run `make check` from the build
 directory. This tests five-digit and Alpha-5 satellite catalog IDs and verifies
 that the executable advertises Alpha-5. A separate native check covers map
 downsampling, including square, rectangular, odd-sized and one-row maps.
+Image-read checks cover same-process reuse after an unavailable input, round
+trips for enabled readers, grayscale JPEG, and PNG alpha and bit-depth handling.
 When PNG and JPEG are enabled, the CLI check
 also renders a fixed-date Earth scene using only the packaged data. It never
 changes the desktop or uses the current user's maps. The file-output checks

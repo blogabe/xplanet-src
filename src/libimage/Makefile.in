@@ -108,7 +108,7 @@ am__v_AR_0 = @echo "  AR      " $@;
 am__v_AR_1 = 
 libimage_a_AR = $(AR) $(ARFLAGS)
 libimage_a_LIBADD =
-am__libimage_a_SOURCES_DIST = Image.cpp Image.h ReadImage.cpp \
+am__libimage_a_SOURCES_DIST = Image.cpp Image.h ImageReadLimits.h ReadImage.cpp \
 	WriteImage.cpp bmp.c gif.c jpeg.c png.c pnm.c tiff.c
 am__objects_1 = ReadImage.$(OBJEXT)
 am__objects_2 = WriteImage.$(OBJEXT)
@@ -339,7 +339,7 @@ AM_CPPFLAGS = -I@top_srcdir@/src
 @USE_AR_TRUE@libdisplay_a_AR = $(AR) cru
 @USE_AR_FALSE@libtimer_a_AR = $(CXX) @xplanet_ARFLAGS@
 @USE_AR_TRUE@libtimer_a_AR = $(AR) cru
-libimage_a_SOURCES = Image.cpp Image.h $(read) $(write) $(bmp) $(gif) $(jpeg) $(png) $(pnm) $(tiff)
+libimage_a_SOURCES = Image.cpp Image.h ImageReadLimits.h $(read) $(write) $(bmp) $(gif) $(jpeg) $(png) $(pnm) $(tiff)
 all: all-am
 
 .SUFFIXES:
