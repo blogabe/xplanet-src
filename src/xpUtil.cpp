@@ -33,11 +33,13 @@ extern char **environ;
 
 #include "Options.h"
 #include "OrbitMath.h"
+#include "SceneValidation.h"
 #include "xpUtil.h"
 
 void 
 xpExit(const string &message, const char *file, const int line)
 {
+    if (SceneValidation::active()) SceneValidation::parserError(message);
     cerr << "Error: " << message;
     cerr << "Exiting from " << file << " at line " << line << endl;
 
@@ -81,6 +83,11 @@ nextAnnotationRecord(istream &input, char *line, size_t size,
 void 
 xpWarn(const string &message, const char *file, const int line)
 {
+    if (SceneValidation::active())
+    {
+        SceneValidation::parserWarning(message);
+        return;
+    }
     Options *options = Options::getInstance();
     if (options->Verbosity() >= 0) 
     {
@@ -94,6 +101,7 @@ xpWarn(const string &message, const char *file, const int line)
 void 
 xpMsg(const string &message, const char *file, const int line)
 {
+    if (SceneValidation::active()) return;
     Options *options = Options::getInstance();
     if (options->Verbosity() > 0) 
     {

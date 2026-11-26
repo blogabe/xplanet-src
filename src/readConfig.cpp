@@ -1,6 +1,7 @@
 #include <clocale>
 #include <cmath>
 #include <limits>
+#include <memory>
 #include <locale>
 #include <cstdio>
 #include <cstring>
@@ -15,6 +16,7 @@ using namespace std;
 #include "Options.h"
 #include "parse.h"
 #include "PlanetProperties.h"
+#include "SceneValidation.h"
 #include "xpDefines.h"
 #include "xpUtil.h"
 
@@ -99,6 +101,7 @@ readConfig(const char *line, PlanetProperties *planetProperties[], const string 
     {
         char *returnString = NULL;
         int val = parse(i, line, returnString);
+        unique_ptr<char[]> token(returnString);
 
         if (val != BODY && currentProperties == NULL)
             xpExit("No Planet defined in config file!\n", 
@@ -657,8 +660,6 @@ readConfig(const char *line, PlanetProperties *planetProperties[], const string 
             xpMsg(msg.str(), __FILE__, __LINE__);
         }
 
-        delete [] returnString;
-
         if (val == ENDOFLINE) break;
     }
 }
@@ -666,10 +667,12 @@ readConfig(const char *line, PlanetProperties *planetProperties[], const string 
 void
 readConfigFile(string configFile, PlanetProperties *planetProperties[])
 {
-    bool foundFile = findFile(configFile, "config");
+    bool foundFile = findFile(configFile, "config", !SceneValidation::active());
+    const SceneValidation::Location configLocation(configFile);
     if (foundFile)
     {
-        defaultProperties = new PlanetProperties(UNKNOWN_BODY);
+        unique_ptr<PlanetProperties> defaults(new PlanetProperties(UNKNOWN_BODY));
+        defaultProperties = defaults.get();
         currentProperties = defaultProperties;
 
         ifstream inFile(configFile.c_str());
@@ -678,6 +681,7 @@ readConfigFile(string configFile, PlanetProperties *planetProperties[])
         for (;;)
         {
             ++lineNumber;
+            const SceneValidation::Location lineLocation(configFile, lineNumber);
             if (inFile.getline(line, sizeof(line)))
             {
                 ostringstream location;
@@ -710,7 +714,8 @@ readConfigFile(string configFile, PlanetProperties *planetProperties[])
 
         inFile.close();
 
-        delete defaultProperties;
+        if (SceneValidation::active() && inFile.bad())
+            xpExit("Error reading configuration file " + configFile + "\n", __FILE__, __LINE__);
     }
     else
     {

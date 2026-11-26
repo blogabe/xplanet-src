@@ -1,3 +1,5 @@
+#include <cerrno>
+#include <climits>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -33,6 +35,7 @@ extern "C" {
 #include "Options.h"
 #include "parseColor.h"
 #include "PlanetProperties.h"
+#include "SceneValidation.h"
 
 #include "libannotate/libannotate.h"
 #include "libplanet/Planet.h"
@@ -197,9 +200,47 @@ Options::Options() :
     srandom((unsigned int) tv_sec);
 }
 
+// In validation mode, reject inputs the legacy scanner would otherwise
+// ignore or partially parse. Rendering intentionally keeps its existing parser.
+static bool validSceneNumber(int option, const char *text)
+{
+    char *end = NULL;
+    errno = 0;
+    switch (option)
+    {
+    case ARC_SPACING: case BASEMAG: case FOV: case GRS_LON:
+    case LATITUDE: case LOCALTIME: case LOGMAGSTEP: case LONGITUDE:
+    case PROJECTIONPARAMETER: case RADIUS: case RANGE: case ROTATE:
+    case STARFREQ: case TIMEWARP:
+        if (!std::isfinite(strtod(text, &end))) return false;
+        break;
+    case FONTSIZE: case NUM_TIMES: case OUTPUT_START_INDEX: case QUALITY:
+    case THICKNESS: case VERBOSITY: case WAIT:
+    {
+        const long number = strtol(text, &end, 10);
+        if (number < INT_MIN || number > INT_MAX) return false;
+        if ((option == FONTSIZE || option == THICKNESS) && number < 1) return false;
+        break;
+    }
+    case HIBERNATE: case IDLEWAIT: case XWINID:
+    {
+        const char *number = text + strspn(text, " \t\n\r\f\v");
+        if (*number == '-') return false;
+        const bool hex = option == XWINID && text[0] == '0'
+            && (text[1] == 'x' || text[1] == 'X');
+        strtoul(text, &end, hex ? 16 : 10);
+        break;
+    }
+    default:
+        return true;
+    }
+    return errno == 0 && end != text && end[strspn(end, " \t\n\r\f\v")] == '\0';
+}
+
 void
 Options::parseArgs(int argc, char **argv)
 {
+    constexpr int validateSelector = 10000;
     static struct option long_options[] =
         {
             {"arc_file",       required_argument, NULL, ARC_FILE},
@@ -275,6 +316,7 @@ Options::parseArgs(int argc, char **argv)
             {"transparency",   no_argument,       NULL, TRANSPARENT},
             {"transpng",       required_argument, NULL, TRANSPNG},
             {"utclabel",       no_argument,       NULL, UTCLABEL},
+            {"validate",       no_argument,       NULL, validateSelector},
             {"verbosity",      required_argument, NULL, VERBOSITY},
             {"version",        no_argument,       NULL, VERSIONNUMBER},
             {"vroot",          no_argument,       NULL, VROOT},
@@ -294,6 +336,11 @@ Options::parseArgs(int argc, char **argv)
     while((this_option = getopt_long_only(argc, argv, "+", long_options, 
                                           &option_index)) >= 0)
     {
+        if (SceneValidation::active() && optarg != NULL
+            && !validSceneNumber(this_option, optarg))
+            xpExit(string("Invalid numeric value for -") + long_options[option_index].name + ".\n",
+                   __FILE__, __LINE__);
+
         switch (this_option)
         {
         case ARC_FILE:
@@ -401,6 +448,9 @@ Options::parseArgs(int argc, char **argv)
                                            &width, &height);
             geometrySelected_ = ((geometryMask_ & WidthValue) 
                                  && (geometryMask_ & HeightValue));
+            if (SceneValidation::active() && (!geometrySelected_ || width == 0 || height == 0
+                                              || width > INT_MAX || height > INT_MAX))
+                xpExit("Invalid -geometry; supply positive WIDTHxHEIGHT.\n", __FILE__, __LINE__);
         }
         break;
         case GLARE:
@@ -932,7 +982,12 @@ Options::parseArgs(int argc, char **argv)
         case VERBOSITY:
             sscanf(optarg, "%d", &verbosity_);
             break;
+        case validateSelector:
+            xpExit("-validate must appear before the scene options.\n", __FILE__, __LINE__);
+            break;
         case VERSIONNUMBER:
+            if (SceneValidation::active())
+                xpExit("-version cannot be combined with -validate.\n", __FILE__, __LINE__);
             printVersion();
             cout << "TLE catalog IDs: Alpha-5" << endl;
             exit(EXIT_SUCCESS);
@@ -970,6 +1025,8 @@ Options::parseArgs(int argc, char **argv)
             break;
         case HELP:
         {
+            if (SceneValidation::active())
+                xpExit("-help cannot be combined with -validate.\n", __FILE__, __LINE__);
             cout << "Valid options to Xplanet are:\n";
             unsigned int i = 0;
             while (1)
@@ -985,6 +1042,9 @@ Options::parseArgs(int argc, char **argv)
         break;
         default:
         case UNKNOWN:
+            if (SceneValidation::active() && optind > 0 && optind <= argc)
+                xpExit(string("Invalid option or missing argument: ") + argv[optind - 1] + ". See -help.\n",
+                       __FILE__, __LINE__);
             xpExit("Invalid option or missing argument. See -help.\n", __FILE__, __LINE__);
             break;
         }

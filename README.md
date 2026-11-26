@@ -57,6 +57,38 @@ can slightly change pixels in some planetary views. Corrected interpolation
 rounding also changes pixel values when relief, cloud or specular maps are
 resized to match the day map. These changes are intentional.
 
+## Check a scene before rendering
+
+Put `-validate` first, followed by your render's input options, to check
+the scene without rendering a frame, setting wallpaper or running hooks.
+
+```sh
+xplanet -validate -target earth -searchdir ./my-scene -config earth.conf
+```
+
+It writes one JSON report to stdout and exits with status 0 for a valid
+scene or 1 for errors. The report has `schema_version`, `valid` and
+`diagnostics` keys. Each diagnostic has a `severity`, `code` and `message`,
+with file, line and field details where known. Warnings alone do not fail
+validation. The check parses scene options, config, observer data and
+satellite elements, verifies satellite IDs, decodes configured maps and
+checks the native JPL header. Other resources, including marker and arc
+files, fonts, star catalogs and SPICE inputs, are checked for readability,
+not full content or runtime validity. A clean report does not guarantee
+render or Finder success.
+
+## Track a satellite with OMM data
+
+Existing TLE and Alpha-5 configurations still work. To use CelesTrak's
+OMM CSV, point `satellite_file` to a marker list (for example, `tracked`).
+Save the CSV beside it as `tracked.omm.csv` and put the decimal catalog IDs
+in `tracked`. If a matching `tracked.tle` exists, Xplanet uses it instead.
+
+Use an Earth, TEME, UTC, SGP4 element set. The reader accepts IDs up to nine
+digits and reads the CSV directly without converting it to TLE. See the
+[satellite input examples](xplanet/satellites/README) and
+[CelesTrak's format guide](https://celestrak.org/NORAD/documentation/gp-data-formats.php).
+
 ## Try another scene
 
 Catalog stars are visible in the sky around a globe, not on a map that

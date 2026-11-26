@@ -9,7 +9,7 @@ buildDirectoryVector(std::vector<std::string> &directoryVector,
                      const std::string &subdir);
 
 extern bool
-findFile(std::string &filename, const std::string &subdir);
+findFile(std::string &filename, const std::string &subdir, bool warnIfMissing = true);
 
 #endif
 

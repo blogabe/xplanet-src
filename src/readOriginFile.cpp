@@ -9,6 +9,7 @@ using namespace std;
 
 #include "findFile.h"
 #include "readOriginFile.h"
+#include "SceneValidation.h"
 #include "xpUtil.h"
 
 static double
@@ -78,6 +79,7 @@ readOriginRecords(string filename, vector<LBRPoint> &points,
     for (;;)
     {
         ++lineNumber;
+        const SceneValidation::Location location(filename, lineNumber);
         if (!file.getline(line, sizeof(line)))
         {
             if (file.eof() || file.bad() || file.gcount() == 0) break;

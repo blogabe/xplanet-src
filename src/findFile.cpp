@@ -55,7 +55,7 @@ fileExists(string &filename)
 }
 
 bool
-findFile(string &filename, const string &subdir)
+findFile(string &filename, const string &subdir, bool warnIfMissing)
 {
     // Check if the file exists in the current directory before going
     // to searchdir
@@ -94,6 +94,8 @@ findFile(string &filename, const string &subdir)
             return(true);
         }
     }
+
+    if (!warnIfMissing) return false;
 
     string errMsg("Can't find ");
     errMsg += filename;

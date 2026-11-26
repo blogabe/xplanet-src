@@ -191,12 +191,13 @@ instructions).  A value between 5 and 10 is typical.  A rayleigh_file
 must be specified as well.
 
 satellite_file
-Specify a file containing a list of satellites to display.  A file
-containing NORAD two line element (TLE) sets named satfile.tle must
-exist along with satfile.  A good source of TLEs is www.celestrak.com.
-This option may be used more than once.  The default is no satellite
-files.  See the README and sample files in the xplanet/satellites
-directory for more information.
+Specify a marker list containing the IDs of the satellites to display.
+For a list named satfile, provide either satfile.tle (legacy TLE/Alpha-5)
+or satfile.omm.csv (CelesTrak-style OMM CSV). If both are present, TLE
+takes precedence. The marker list uses decimal catalog IDs for OMM
+elements, including IDs up to nine digits. This option may be used more
+than once. The default is no satellite files. See the README in
+xplanet/satellites for the supported formats and an example.
 
 shade
 If the night image file is not found, set the brightness of the night
