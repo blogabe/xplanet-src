@@ -35,6 +35,29 @@ readConfigNumber(const char *text, Number &number)
     return stream.eof();
 }
 
+// Keep the integer extraction (and its overflow check), but accept a
+// decimal suffix made entirely of zeroes. Do not round through a float:
+// even a fraction too small to survive floating-point conversion is invalid.
+static bool
+readConfigInteger(const char *text, int &number)
+{
+    if (text == NULL) return false;
+    istringstream stream(text);
+    stream.imbue(locale::classic());
+    int value;
+    if (!(stream >> value)) return false;
+    if (stream.peek() == '.')
+    {
+        stream.get();
+        if (stream.get() != '0') return false;
+        while (stream.peek() == '0') stream.get();
+    }
+    stream >> ws;
+    if (!stream.eof()) return false;
+    number = value;
+    return true;
+}
+
 template <typename Number, size_t Count>
 static bool
 readConfigTuple(const char *text, Number (&values)[Count])
@@ -171,7 +194,7 @@ readConfig(const char *line, PlanetProperties *planetProperties[], const string 
         case BUMP_SHADE:
         {
             int s;
-            if (!readConfigNumber(returnString, s))
+            if (!readConfigInteger(returnString, s))
             {
                 numericWarning(location, "bump_shade");
                 break;
@@ -218,7 +241,7 @@ readConfig(const char *line, PlanetProperties *planetProperties[], const string 
         case CLOUD_THRESHOLD:
         {
             int t;
-            if (!readConfigNumber(returnString, t))
+            if (!readConfigInteger(returnString, t))
             {
                 numericWarning(location, "cloud_threshold");
                 break;
@@ -284,7 +307,7 @@ readConfig(const char *line, PlanetProperties *planetProperties[], const string 
         case GRID1:
         {
             int grid1;
-            if (!readConfigNumber(returnString, grid1))
+            if (!readConfigInteger(returnString, grid1))
             {
                 numericWarning(location, "grid1");
                 break;
@@ -298,7 +321,7 @@ readConfig(const char *line, PlanetProperties *planetProperties[], const string 
         case GRID2:
         {
             int grid2;
-            if (!readConfigNumber(returnString, grid2))
+            if (!readConfigInteger(returnString, grid2))
             {
                 numericWarning(location, "grid2");
                 break;
@@ -385,7 +408,7 @@ readConfig(const char *line, PlanetProperties *planetProperties[], const string 
         case MARKER_FONTSIZE:
         { 
             int fontSize;
-            if (!readConfigNumber(returnString, fontSize))
+            if (!readConfigInteger(returnString, fontSize))
             {
                 numericWarning(location, "marker_fontsize");
                 break;
@@ -579,7 +602,7 @@ readConfig(const char *line, PlanetProperties *planetProperties[], const string 
         case THICKNESS:
         {
             int thickness;
-            if (!readConfigNumber(returnString, thickness))
+            if (!readConfigInteger(returnString, thickness))
             {
                 numericWarning(location, "thickness");
                 break;
@@ -598,7 +621,7 @@ readConfig(const char *line, PlanetProperties *planetProperties[], const string 
         case TWILIGHT:
         {
             int value;
-            if (!readConfigNumber(returnString, value))
+            if (!readConfigInteger(returnString, value))
             {
                 numericWarning(location, "twilight");
                 break;

@@ -226,6 +226,45 @@ if cmp -s shade-0.png shade-50.png; then
     printf '%s\n' 'Shade fixture did not affect the image' >&2
     exit 1
 fi
+# Scalar integer settings accept exact integral decimals, not conversion
+# rounded to an integer. Invalid overrides must leave the valid setting intact.
+for variant in integer decimal fraction tiny-fraction overflow underflow junk; do
+    printf '[earth]\ngrid=true\n' > "integer-$variant.conf"
+    for setting in bump_shade=30 cloud_threshold=20 grid1=20 grid2=10 \
+        marker_fontsize=12 arc_thickness=3 twilight=15; do
+        value=${setting#*=}
+        case $variant in
+            integer) valid=$value ;;
+            decimal) valid=$value.000 ;;
+            *) valid=$value ;;
+        esac
+        key=${setting%%=*}
+        printf '%s=%s\n' "$key" "$valid" >> "integer-$variant.conf"
+        case $variant in
+            fraction) invalid=$value.5 ;;
+            tiny-fraction) invalid=$value.000000000000000000000000000001 ;;
+            overflow) invalid=2147483648.0 ;;
+            underflow) invalid=-2147483649.0 ;;
+            junk) invalid=$value.0x ;;
+            *) continue ;;
+        esac
+        printf '%s=%s\n' "$key" "$invalid" >> "integer-$variant.conf"
+    done
+    render -config "integer-$variant.conf" -num_times 1 \
+        -output "integer-$variant.png" > "integer-$variant.log" 2>&1
+    case $variant in
+        integer|decimal)
+            if grep -F ': invalid ' "integer-$variant.log"; then exit 1; fi ;;
+        *)
+            line=4
+            for key in bump_shade cloud_threshold grid1 grid2 marker_fontsize thickness twilight; do
+                grep -F "integer-$variant.conf:$line: invalid $key value; keeping the previous value." \
+                    "integer-$variant.log" >/dev/null
+                line=$((line + 2))
+            done ;;
+    esac
+    cmp integer-integer.png "integer-$variant.png"
+done
 printf '%s\n' 'CLI, configuration and origin input checks passed'
 
 "$binary" --version > long-option.log
