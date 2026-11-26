@@ -2,6 +2,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <fstream>
+#include <iterator>
+#include <string>
 
 #include "config.h"
 #include "libimage/Image.h"
@@ -73,6 +76,47 @@ writePngFixture(const char *path, bool palette)
 #endif
 
 #ifdef HAVE_LIBJPEG
+void
+checkJpegWarnings()
+{
+    std::ifstream source("image.jpg", std::ios::binary);
+    const std::string clean((std::istreambuf_iterator<char>(source)),
+                            std::istreambuf_iterator<char>());
+    const size_t sos = clean.find("\xff\xda");
+    require(sos != std::string::npos && clean.size() >= sos + 16
+            && clean.compare(clean.size() - 2, 2, "\xff\xd9") == 0,
+            "Expected sequential JPEG fixture");
+    std::string stray = clean, scan = clean;
+    stray.insert(sos, 1, 'x');
+    const size_t scan_params = sos + 5 + 2 * static_cast<unsigned char>(scan[sos + 4]);
+    scan[scan_params + 1] = 62;
+    const std::string cases[] = {stray, scan, clean.substr(0, clean.size() - 2),
+                                clean.substr(0, scan_params + 4)};
+    Image reference, result;
+    require(reference.Read("image.jpg"), "Decode clean JPEG reference");
+    for (size_t i = 0; i < 4; ++i)
+    {
+        std::ofstream file("warning.jpg", std::ios::binary);
+        file.write(cases[i].data(), cases[i].size());
+        file.close();
+        require(file.good(), "Write JPEG warning case");
+        if (i == 3)
+        {
+            const auto *last = result.getRGBData();
+            require(!result.Read("warning.jpg") && result.getRGBData() == last,
+                    "Truncated JPEG must not replace last good pixels");
+        }
+        else
+        {
+            require(result.Read("warning.jpg") && result.Width() == reference.Width()
+                    && result.Height() == reference.Height()
+                    && std::memcmp(result.getRGBData(), reference.getRGBData(),
+                                   3 * 16 * 16) == 0,
+                    "Recoverable JPEG warning changed pixels");
+        }
+    }
+}
+
 void
 writeGrayJpegFixture()
 {
@@ -149,6 +193,7 @@ main()
 #endif
 #ifdef HAVE_LIBJPEG
     roundTrip(input, output, "image.jpg", 10);
+    checkJpegWarnings();
     writeGrayJpegFixture();
     require(output.Read("gray.jpg") && output.Width() == 8, "Read grayscale JPEG");
     const unsigned char *gray = output.getRGBData();

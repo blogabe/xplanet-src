@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include <jpeglib.h>
+#include <jerror.h>
 
 #include "ImageReadLimits.h"
 
@@ -43,8 +44,28 @@ jpeg_codec_failed(j_common_ptr cinfo)
 static void
 jpeg_read_message(j_common_ptr cinfo, int level)
 {
-    /* Do not return a partly decoded image after the library repairs bad input. */
-    if (level < 0) jpeg_codec_failed(cinfo);
+    if (level >= 0) return;
+    switch (cinfo->err->msg_code)
+    {
+    case JWRN_EXTRANEOUS_DATA:
+    case JWRN_NOT_SEQUENTIAL:
+        /* The decoder can still recover every sample in these cases. */
+        return;
+    case JWRN_JPEG_EOF:
+    {
+        const j_decompress_ptr codec = (j_decompress_ptr) cinfo;
+        /* Accept an omitted EOI only for a complete single sequential scan.
+         * If the synthesized EOI interrupts entropy data, libjpeg then emits
+         * JWRN_HIT_MARKER, which is fatal below. */
+        if (!codec->progressive_mode && codec->input_scan_number == 1
+            && codec->comps_in_scan == codec->num_components)
+            return;
+        break;
+    }
+    default:
+        break;
+    }
+    jpeg_codec_failed(cinfo);
 }
 
 struct jpeg_input
