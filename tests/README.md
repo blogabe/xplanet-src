@@ -1,22 +1,28 @@
 # Renderer regression checks
 
-After configuring and building Xplanet, run `make check` from the build
-directory. This tests five-digit and Alpha-5 satellite catalog IDs and verifies
-that the executable advertises Alpha-5. A separate native check covers map
-downsampling, including square, rectangular, odd-sized and one-row maps.
-Image-read checks cover same-process reuse after an unavailable input, round
-trips for enabled readers, grayscale JPEG, and PNG alpha and bit-depth handling.
-Other native checks cover legacy Rayleigh table loading, vector and orbit math,
-and trail argument parsing.
-When PNG and JPEG are enabled, the CLI check
-also renders a fixed-date Earth scene using only the packaged data. It never
-changes the desktop or uses the current user's maps. The file-output checks
-cover replacement, preservation of the old image after an I/O error, temporary
-file cleanup, rejected destinations and frame naming. Each enabled writer is
-tested by limiting the file size in a child process. The CLI checks also cover
-refresh recovery, timezone restoration, observer files and option errors.
+Run `make check` from the build directory. The native checks cover:
 
-When building from a checkout or repacked source, run `./prepare-build.sh`
-before `./configure` if timestamps would cause Make to regenerate the
-shipped Autotools files. It changes timestamps only. Keep the generated
-Makefile in sync when editing the build rules.
+- Five-digit and Alpha-5 satellite catalog IDs, including name handling.
+- Map downsampling for square, rectangular, odd-sized and one-row maps.
+- Image reads and enabled codec round trips, including decoded-size bounds,
+  PNG alpha and bit depth, grayscale JPEG, recoverable JPEG warnings, and
+  rejection of truncated JPEGs and GIFs without a frame. Failed reads must
+  leave the previous image intact.
+- Legacy Rayleigh table loading, vector and orbit math, and trail arguments.
+
+With PNG and JPEG enabled, the CLI checks also render in an isolated temporary
+directory. They don't use the current user's maps or change the desktop.
+
+- A uniform texture checks all decoded RGB samples. An asymmetric texture
+  checks north/south orientation and longitude at eight points. Two UTC
+  times check the expected switch between sunlit and dark regions. Sample
+  expectations allow five levels per channel for legacy integer filtering.
+- File-output checks cover replacement, preservation on write failure,
+  temporary-file cleanup, rejected destinations and frame numbering.
+- Additional cases check refresh recovery, timezone restoration, observer
+  records, invalid options, exact decimal notation for integer settings,
+  and continued rendering after overlong annotation and TLE records.
+
+When building from a Git checkout, run `./prepare-build.sh` before configuring
+if timestamps would trigger regeneration. For changes to the build inputs,
+use the pinned regeneration procedure in [the project README](../README.md).
