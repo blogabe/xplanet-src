@@ -16,7 +16,7 @@ class TimerMacAqua : public Timer
     bool Sleep();
 
  private:
-    unsigned long GetSystemIdleTime();
+    bool GetSystemIdleTime(unsigned long &idle);
 };
 
 #endif

@@ -1,3 +1,4 @@
+#include <climits>
 #include <cstdlib>
 #include <sstream>
 using namespace std;
@@ -40,7 +41,8 @@ TimerMacAqua::Sleep()
     // display has been idle for long enough.
     if (idlewait_ > 0) 
     {
-        unsigned long idle = GetSystemIdleTime();
+        unsigned long idle;
+        if (!GetSystemIdleTime(idle)) return true;
         Options *options = Options::getInstance();
         if (options->Verbosity() > 0)
         {
@@ -53,9 +55,9 @@ TimerMacAqua::Sleep()
         while (idle < idlewait_) 
         {
             gettimeofday(&currentTime_, NULL);
-            if (!SleepForTime((idlewait_ - idle) / 1000))
+            if (!SleepForTime((idlewait_ - idle - 1) / 1000 + 1))
                 return(false);
-            idle = GetSystemIdleTime();
+            if (!GetSystemIdleTime(idle)) return true;
         }
     }
     
@@ -64,7 +66,8 @@ TimerMacAqua::Sleep()
     // something happens.
     if (hibernate_ > 0)
     {
-        unsigned long idle = GetSystemIdleTime();
+        unsigned long idle;
+        if (!GetSystemIdleTime(idle)) return true;
         Options *options = Options::getInstance();
         if (options->Verbosity() > 0 && idle > hibernate_)
             xpMsg("Hibernating ...\n", __FILE__, __LINE__);
@@ -73,7 +76,7 @@ TimerMacAqua::Sleep()
         {
             if (!SleepForTime(1)) 
                 return(false);
-            idle = GetSystemIdleTime();
+            if (!GetSystemIdleTime(idle)) return true;
         }
     }
     return(true);
@@ -126,89 +129,57 @@ TimerMacAqua::Sleep()
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-unsigned long
-TimerMacAqua::GetSystemIdleTime()
+bool
+TimerMacAqua::GetSystemIdleTime(unsigned long &idle)
 {
-    unsigned long idle;
-        
-    mach_port_t masterPort;
-    io_iterator_t iter;
-    io_registry_entry_t curObj;
-        
-    IOMasterPort(MACH_PORT_NULL, &masterPort);
-        
-    /* Get IOHIDSystem */
-    IOServiceGetMatchingServices(masterPort,
-                                 IOServiceMatching("IOHIDSystem"),
-                                 &iter);
-    if (iter == 0)
+    io_service_t service = IOServiceGetMatchingService(
+        MACH_PORT_NULL, IOServiceMatching("IOHIDSystem"));
+    CFTypeRef value = service == IO_OBJECT_NULL ? NULL
+        : IORegistryEntryCreateCFProperty(service, CFSTR("HIDIdleTime"),
+                                          kCFAllocatorDefault, 0);
+    if (service != IO_OBJECT_NULL) IOObjectRelease(service);
+
+    uint64_t nanoseconds = 0;
+    bool valid = false;
+    if (value != NULL)
     {
-        xpWarn("Error accessing IOHIDSystem\n", __FILE__, __LINE__);
-    }
-        
-    curObj = IOIteratorNext(iter);
-        
-    if (curObj == 0)
-    {
-        xpWarn("Iterator's empty!\n", __FILE__, __LINE__);
-    }
-        
-    CFMutableDictionaryRef properties = 0;
-    CFTypeRef obj;
-        
-    if (IORegistryEntryCreateCFProperties(curObj, &properties,
-                                          kCFAllocatorDefault, 0)
-        == KERN_SUCCESS && properties != NULL) 
-    {
-                
-        obj = CFDictionaryGetValue(properties, CFSTR("HIDIdleTime"));
-        CFRetain(obj);
-    } 
-    else 
-    {
-        xpWarn("Couldn't grab properties of system\n", __FILE__, __LINE__);
-        obj = NULL;
-    }
-        
-    if (obj) 
-    {
-        uint64_t tHandle;
-                
-        CFTypeID type = CFGetTypeID(obj);
-                
-        if (type == CFDataGetTypeID()) 
+        const CFTypeID type = CFGetTypeID(value);
+        if (type == CFDataGetTypeID())
         {
-            CFDataGetBytes((CFDataRef) obj,
-                           CFRangeMake(0, sizeof(tHandle)), 
-                           (UInt8*) &tHandle);   
-        } 
-        else if (type == CFNumberGetTypeID()) 
-        {
-            CFNumberGetValue((CFNumberRef)obj,
-                             kCFNumberSInt64Type,
-                             &tHandle);
-        } 
-        else 
-        { 
-            ostringstream errMsg;
-            errMsg << (int) type << ": unsupported type\n";
-            xpWarn(errMsg.str(), __FILE__, __LINE__);
+            CFDataRef data = static_cast<CFDataRef>(value);
+            if (CFDataGetLength(data) == sizeof(nanoseconds))
+            {
+                CFDataGetBytes(data, CFRangeMake(0, sizeof(nanoseconds)),
+                               reinterpret_cast<UInt8 *>(&nanoseconds));
+                valid = true;
+            }
         }
-                
-        CFRelease(obj);    
-                
-        // tHandle is in nanoseconds, we want milliseconds
-        idle = static_cast<unsigned long> (tHandle / 1e6);
-    } 
-    else 
-    {
-        xpWarn("Can't find idle time\n", __FILE__, __LINE__);
+        else if (type == CFNumberGetTypeID())
+        {
+            int64_t number = 0;
+            if (CFNumberGetValue(static_cast<CFNumberRef>(value), kCFNumberSInt64Type,
+                                 &number) && number >= 0)
+            {
+                nanoseconds = number;
+                valid = true;
+            }
+        }
+        CFRelease(value);
     }
-        
-    /* Release our resources */
-    IOObjectRelease(curObj);
-    IOObjectRelease(iter);
-    CFRelease((CFTypeRef)properties);
-        
-    return(idle);
+
+    if (!valid)
+    {
+        static bool warned = false;
+        if (!warned)
+        {
+            xpWarn("Idle time unavailable; continuing on the normal refresh schedule.\n",
+                   __FILE__, __LINE__);
+            warned = true;
+        }
+        return false;
+    }
+
+    const uint64_t milliseconds = nanoseconds / 1000000;
+    idle = milliseconds > ULONG_MAX ? ULONG_MAX : static_cast<unsigned long>(milliseconds);
+    return true;
 }

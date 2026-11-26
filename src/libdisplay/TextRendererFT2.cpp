@@ -14,6 +14,7 @@ using namespace std;
 
 TextRendererFT2::TextRendererFT2(DisplayBase *display) : TextRenderer(display)
 {
+    face_ = NULL;
     glyphs_ = NULL;
     pos = NULL;
     numGlyphs_ = 0;
@@ -30,7 +31,7 @@ TextRendererFT2::TextRendererFT2(DisplayBase *display) : TextRenderer(display)
 
 TextRendererFT2::~TextRendererFT2()
 {
-    FT_Done_Face(face_);
+    if (face_ != NULL) FT_Done_Face(face_);
     FT_Done_FreeType(library_);
 
     delete [] glyphs_;
@@ -56,7 +57,8 @@ TextRendererFT2::Font(const string &font)
         }
     }
 
-    int error = FT_New_Face(library_, font_.c_str(), 0, &face_);
+    FT_Face next = NULL;
+    int error = FT_New_Face(library_, font_.c_str(), 0, &next);
     if (error)
     {
         ostringstream errStr;
@@ -64,7 +66,7 @@ TextRendererFT2::Font(const string &font)
         xpExit(errStr.str(), __FILE__, __LINE__);
     }
 
-    error = FT_Select_Charmap(face_, ft_encoding_unicode);
+    error = FT_Select_Charmap(next, ft_encoding_unicode);
     if (error)
     {
         ostringstream errStr;
@@ -72,6 +74,8 @@ TextRendererFT2::Font(const string &font)
         xpExit(errStr.str(), __FILE__, __LINE__);
     }
 
+    if (face_ != NULL) FT_Done_Face(face_);
+    face_ = next;
     FontSize(fontSize_);
 }
 
