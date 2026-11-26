@@ -266,10 +266,10 @@ readSatelliteFile(const char *line, Planet *planet,
 
             if (syntaxError) break;
 
-            if (!sscanf(++ptr, "%d,%d,%d", &trailStart, &trailEnd,
-                        &trailInterval) == 3)
+            if (sscanf(++ptr, "%d,%d,%d", &trailStart, &trailEnd,
+                       &trailInterval) != 3 || trailInterval <= 0 || trailStart > trailEnd)
             {
-                xpWarn("Need four values for trail{}!\n", 
+                xpWarn("trail{} requires a type, an ordered start and end, and a positive interval.\n",
                        __FILE__, __LINE__);
                 syntaxError = true;
             }
@@ -291,7 +291,6 @@ readSatelliteFile(const char *line, Planet *planet,
                     syntaxError = true;
                     break;
                 }
-                if (trailInterval < 1) trailInterval = 1;
             }
         }
         break;

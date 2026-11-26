@@ -361,8 +361,8 @@ setOriginXYZ(PlanetProperties *planetProperties[])
         if (options->OriginMode() == BELOW)
         {
             oX -= 2 * (oX - pX);
-            oY -= 2 * (oY - pX);
-            oZ -= 2 * (oZ - pX);
+            oY -= 2 * (oY - pY);
+            oZ -= 2 * (oZ - pZ);
         }
     }
     break;

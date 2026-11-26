@@ -1,4 +1,5 @@
 #include <clocale>
+#include <cmath>
 #include <cstring>
 #include <fstream>
 #include <map>
@@ -243,10 +244,12 @@ readSpiceFile(const char *line,
         case TRAIL:
         {
             checkLocale(LC_NUMERIC, "C");
-            if (!sscanf(returnString, "%lf,%lf,%lf", &trailStart, &trailEnd,
-                        &trailInterval) == 3)
+            if (sscanf(returnString, "%lf,%lf,%lf", &trailStart, &trailEnd,
+                       &trailInterval) != 3 || !std::isfinite(trailStart)
+                || !std::isfinite(trailEnd) || !std::isfinite(trailInterval)
+                || trailInterval <= 0 || trailStart > trailEnd)
             {
-                xpWarn("Need three values for trail{}!\n", 
+                xpWarn("trail{} requires an ordered start and end and a positive interval.\n",
                        __FILE__, __LINE__);
                 syntaxError = true;
             }
