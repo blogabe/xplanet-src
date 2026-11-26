@@ -9,7 +9,7 @@ public:
     DisplayOutput(const int tr);
     virtual ~DisplayOutput();
 
-    void renderImage(PlanetProperties *planetProperties[]);
+    bool renderImage(PlanetProperties *planetProperties[]);
 
 private:
     int quality_;

@@ -42,7 +42,7 @@ DisplayOutput::~DisplayOutput()
 {
 }
 
-void
+bool
 DisplayOutput::renderImage(PlanetProperties *planetProperties[])
 {
     drawLabel(planetProperties);
@@ -75,4 +75,5 @@ DisplayOutput::renderImage(PlanetProperties *planetProperties[])
         msg << "Created image file " << outputFilename << "\n";
         xpMsg(msg.str(), __FILE__, __LINE__);
     }
+    return true;
 }

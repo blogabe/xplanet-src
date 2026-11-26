@@ -9,7 +9,7 @@ public:
     DisplayMSWin(const int tr);
     virtual ~DisplayMSWin();
 
-    void renderImage(PlanetProperties *planetProperties[]);
+    bool renderImage(PlanetProperties *planetProperties[]);
 
     std::string TmpDir();
 };

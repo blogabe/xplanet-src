@@ -146,7 +146,7 @@ DisplayX11::~DisplayX11()
 {
 }
 
-void
+bool
 DisplayX11::renderImage(PlanetProperties *planetProperties[])
 {
     drawLabel(planetProperties);
@@ -235,6 +235,7 @@ DisplayX11::renderImage(PlanetProperties *planetProperties[])
     XFlush(display);
 
     if (options->DisplayMode() == ROOT) XCloseDisplay(display);
+    return true;
 }
 
 void

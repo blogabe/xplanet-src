@@ -37,6 +37,10 @@ render()
     "$binary" -searchdir "$assets" -target earth -projection rectangular \
         -date 20261125.120000 -geometry 320x160 "$@"
 }
+# Preserve the pre-1.6 abbreviation for -wait on all builds.
+render -wa 300 -num_times 1 -output wait-short.png
+cmp earth.png wait-short.png
+
 # Backend selection must not publish a desktop image when -output is used.
 if grep -Fq 'Wallpaper backends: appkit, finder' version.log; then
     for backend in appkit finder; do
@@ -51,6 +55,16 @@ if grep -Fq 'Wallpaper backends: appkit, finder' version.log; then
         exit 1
     fi
     grep -Fq -- '-fork is not supported with AppKit wallpaper' fork.log
+    grep -Fq -- '-wallpaper_backend finder' fork.log
+
+    # With -output, the parent exits before the detached child writes its PNG.
+    render -wallpaper_backend appkit -fork -num_times 1 -output fork-output.png
+    attempts=0
+    while [ ! -f fork-output.png ] && [ "$attempts" -lt 10 ]; do
+        attempts=$((attempts + 1))
+        sleep 1
+    done
+    cmp earth.png fork-output.png
     expected='expects appkit or finder'
 else
     expected='requires a macOS wallpaper build'

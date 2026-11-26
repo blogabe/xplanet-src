@@ -322,6 +322,8 @@ Options::parseArgs(int argc, char **argv)
             {"verbosity",      required_argument, NULL, VERBOSITY},
             {"version",        no_argument,       NULL, VERSIONNUMBER},
             {"vroot",          no_argument,       NULL, VROOT},
+            // Preserve the old unambiguous abbreviation now that wallpaper_backend exists.
+            {"wa",             required_argument, NULL, WAIT},
             {"wait",           required_argument, NULL, WAIT},
             {"window",         no_argument,       NULL, WINDOW},
             {"window-id",      required_argument, NULL, XWINID},

@@ -88,7 +88,7 @@ string lastFailedWallpaper;
 
 // This was pretty much written by trial and error once I found
 // DesktopPicture.m on developer.apple.com
-void 
+bool
 DisplayMacAqua::renderImage(PlanetProperties *planetProperties[])
 {
     drawLabel(planetProperties);
@@ -148,7 +148,7 @@ DisplayMacAqua::renderImage(PlanetProperties *planetProperties[])
                    << "docs/management.md#finder-automation-permission\n";
         }
         xpWarn(errStr.str(), __FILE__, __LINE__);
-        return;
+        return false;
     }
 
     // Acceptance precedes the visible update. Leave time for macOS to import
@@ -158,4 +158,5 @@ DisplayMacAqua::renderImage(PlanetProperties *planetProperties[])
     lastFailedWallpaper.clear();
     if (!options->SaveDesktopFile())
         removeWallpaperDirectory(directory);
+    return true;
 }

@@ -34,6 +34,24 @@ coordinates and exercise six- and nine-digit OMM IDs, companion search
 precedence, legacy marker options, bounded propagation warnings, and the
 side-effect-free `-validate` JSON and exit status.
 
+## macOS wallpaper release checks
+
+The automated checks cover the fork guard without touching the desktop:
+AppKit wallpaper rejects `-fork`, but an AppKit-configured `-fork -output` run
+still produces identical pixels. The legacy `-wa` spelling also renders.
+
+Use a disposable GUI session for wallpaper tests. Deny Finder Automation
+and verify that a one-frame Finder run exits nonzero, keeps its diagnostic
+image and skips the post-render hook. An unattended run should log a failed
+publish, retry on schedule, and recover after the cause is cleared. Also
+verify the AppKit failure path with a controlled failed publish.
+
+Before rollout, change the active display topology during a running AppKit
+session and confirm subsequent refreshes without restarting. Check direct
+SSH runs with and without an active desktop login separately from the
+supported GUI LaunchAgent. Outside the GUI session, look for a clean
+failure rather than a crash, hang, or change to another session's wallpaper.
+
 When building from a Git checkout, run `./prepare-build.sh` before configuring
 if timestamps would trigger regeneration. For changes to the build inputs,
 use the pinned regeneration procedure in [the project README](../README.md).
