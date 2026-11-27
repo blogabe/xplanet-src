@@ -37,6 +37,45 @@ render()
     "$binary" -searchdir "$assets" -target earth -projection rectangular \
         -date 20261125.120000 -geometry 320x160 "$@"
 }
+# Preserve the pre-1.6 abbreviation for -wait on all builds.
+render -wa 300 -num_times 1 -output wait-short.png
+cmp earth.png wait-short.png
+
+# Backend selection must not publish a desktop image when -output is used.
+if grep -Fq 'Wallpaper backends: appkit, finder' version.log; then
+    for backend in appkit finder; do
+        render -wallpaper_backend "$backend" -num_times 1 -output "$backend.png"
+        cmp earth.png "$backend.png"
+    done
+    # A desktop test is safe here only because the invalid pair must be
+    # rejected before any child process or AppKit call can occur.
+    if render -wallpaper_backend appkit -fork -verbosity 2 -num_times 1 \
+        -tmpdir "$scratch/does-not-exist" > fork.log 2>&1; then
+        echo 'AppKit accepted fork-without-exec' >&2
+        exit 1
+    fi
+    grep -Fq -- '-fork is not supported with AppKit wallpaper' fork.log
+    grep -Fq -- '-wallpaper_backend finder' fork.log
+
+    # With -output, the parent exits before the detached child writes its PNG.
+    render -wallpaper_backend appkit -fork -num_times 1 -output fork-output.png
+    attempts=0
+    while [ ! -f fork-output.png ] && [ "$attempts" -lt 10 ]; do
+        attempts=$((attempts + 1))
+        sleep 1
+    done
+    cmp earth.png fork-output.png
+    expected='expects appkit or finder'
+else
+    expected='requires a macOS wallpaper build'
+fi
+if render -wallpaper_backend invalid -num_times 1 -output backend-invalid.png > backend.log 2>&1; then
+    echo 'Invalid wallpaper backend was accepted' >&2
+    exit 1
+fi
+grep -Fq "$expected" backend.log
+[ ! -e backend-invalid.png ]
+
 # Lossless, uniform 8x4 RGB(40,70,120) PNG. Render with no day/night
 # attenuation and check every output BGR sample. Legacy integer filtering
 # and shading truncate intermediate values; allow up to five levels per channel.

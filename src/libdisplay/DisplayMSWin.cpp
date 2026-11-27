@@ -65,7 +65,7 @@ DisplayMSWin::~DisplayMSWin()
 {
 }
 
-void 
+bool
 DisplayMSWin::renderImage(PlanetProperties *planetProperties[])
 {
     drawLabel(planetProperties);
@@ -95,6 +95,7 @@ DisplayMSWin::renderImage(PlanetProperties *planetProperties[])
     SystemParametersInfo(SPI_SETDESKWALLPAPER, 0, 
                          (char *) outputFilename.c_str(), 
                          SPIF_UPDATEINIFILE);
+    return true;
 }
 
 string

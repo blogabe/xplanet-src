@@ -136,6 +136,7 @@ Options::Options() :
     rayleighFile_(""),
     rotate_(0),
     rotate0_(0),
+    finderWallpaper_(false),
     saveDesktopFile_(false),
     separationDist_(0), 
     separationTarget_(UNKNOWN_BODY), 
@@ -302,6 +303,7 @@ Options::parseArgs(int argc, char **argv)
             {"random",         no_argument,       NULL, RANDOM},
             {"range",          required_argument, NULL, RANGE},
             {"rotate",         required_argument, NULL, ROTATE},
+            {"wallpaper_backend", required_argument, NULL, WALLPAPER_BACKEND},
             {"save_desktop_file", no_argument,    NULL, SAVE_DESKTOP_FILE},
             {"searchdir",      required_argument, NULL, SEARCHDIR},
             {"separation",     required_argument, NULL, SEPARATION},
@@ -320,6 +322,8 @@ Options::parseArgs(int argc, char **argv)
             {"verbosity",      required_argument, NULL, VERBOSITY},
             {"version",        no_argument,       NULL, VERSIONNUMBER},
             {"vroot",          no_argument,       NULL, VROOT},
+            // Preserve the old unambiguous abbreviation now that wallpaper_backend exists.
+            {"wa",             required_argument, NULL, WAIT},
             {"wait",           required_argument, NULL, WAIT},
             {"window",         no_argument,       NULL, WINDOW},
             {"window-id",      required_argument, NULL, XWINID},
@@ -836,6 +840,18 @@ Options::parseArgs(int argc, char **argv)
             sscanf(optarg, "%lf", &rotate0_);
             rotate0_ = fmod(rotate0_, 360.) * deg_to_rad;
             rotate_ = rotate0_;
+            break;
+        case WALLPAPER_BACKEND:
+#ifdef HAVE_AQUA
+            if (strcmp(optarg, "finder") == 0)
+                finderWallpaper_ = true;
+            else if (strcmp(optarg, "appkit") == 0)
+                finderWallpaper_ = false;
+            else
+                xpExit("-wallpaper_backend expects appkit or finder.\n", __FILE__, __LINE__);
+#else
+            xpExit("-wallpaper_backend requires a macOS wallpaper build.\n", __FILE__, __LINE__);
+#endif
             break;
         case SAVE_DESKTOP_FILE:
             saveDesktopFile_ = true;

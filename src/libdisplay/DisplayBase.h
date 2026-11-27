@@ -34,7 +34,7 @@ public:
                   const double opacity[3]);
     void getPixel(const int x, const int y, unsigned char pixel[3]) const;
 
-    virtual void renderImage(PlanetProperties *planetProperties[]) = 0;
+    virtual bool renderImage(PlanetProperties *planetProperties[]) = 0;
 
     const std::string & Font() const { return(textRenderer_->Font()); };
     int FontSize() const { return(textRenderer_->FontSize()); };

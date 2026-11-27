@@ -170,6 +170,8 @@ open.  Be careful when using this option; it's easy to have multiple
 processes running at the same time without knowing it - check the Task
 Manager.  On unix systems this is pretty much the same as running
 xplanet in the background.
+AppKit wallpaper on macOS requires foreground execution or a user
+LaunchAgent and cannot be combined with this option.
 
 .TP
 .B \-fov
@@ -497,6 +499,17 @@ is 0.  My friends in the Southern Hemisphere can use \-rotate 180 to
 make the earth look like it should!  For non-orthographic projections,
 the globe is rotated and then projected, if that helps you visualize
 what to expect.
+
+.TP
+.B \-wallpaper_backend appkit|finder
+On macOS wallpaper builds, choose the desktop publisher. AppKit is the
+default and changes the main display's wallpaper without sending Finder Apple
+Events. Run AppKit wallpaper in the foreground or with a user LaunchAgent;
+it cannot be combined with \-fork. Use finder for the legacy backend.
+There is no automatic fallback. This option does not affect
+\-output.
+See \fIdocs/macos-wallpaper.md\fP in the source distribution for the
+backend trade-offs and the proposed desktop layer.
 
 .TP
 .B \-save_desktop_file

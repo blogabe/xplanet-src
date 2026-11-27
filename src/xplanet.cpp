@@ -83,6 +83,15 @@ main(int argc, char **argv)
 
     if (options->Fork())
     {
+#ifdef HAVE_AQUA
+        // The child continues without exec; it must not initialize AppKit.
+        if (!options->FinderWallpaper() && options->DisplayMode() != OUTPUT
+            && options->RayleighFile().empty())
+            xpExit("-fork is not supported with AppKit wallpaper. "
+                   "Run in the foreground or use a user LaunchAgent. "
+                   "To keep the legacy behavior, use -wallpaper_backend finder.\n",
+                   __FILE__, __LINE__);
+#endif
         pid_t pid = fork();
         switch (pid)
         {
@@ -227,15 +236,19 @@ main(int argc, char **argv)
                            planetProperties[target->Index()], unreadableMap);
         }
 
-        if (unreadableMap.empty()) display->renderImage(planetProperties);
+        const bool published = unreadableMap.empty()
+            && display->renderImage(planetProperties);
         delete display;
 
         destroyPlanetMap();
 
         if (!unreadableMap.empty())
-        {
             xpWarn("Cannot read map " + unreadableMap + "; frame not published.\n",
                    __FILE__, __LINE__);
+        if (!published)
+        {
+            // A finite run reports failure; a wallpaper service retries at
+            // its normal cadence without counting or running the post hook.
             if (options->NumTimes() > 0 || origin_file)
             {
                 result = EXIT_FAILURE;
@@ -245,7 +258,7 @@ main(int argc, char **argv)
         else
             ++times_run;
 
-        if (unreadableMap.empty() && !options->PostCommand().empty())
+        if (published && !options->PostCommand().empty())
         {
             if (system(options->PostCommand().c_str()) != 0)
             {

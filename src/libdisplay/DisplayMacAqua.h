@@ -9,7 +9,7 @@ public:
     DisplayMacAqua(const int tr);
     virtual ~DisplayMacAqua();
 
-    void renderImage(PlanetProperties *planetProperties[]);
+    bool renderImage(PlanetProperties *planetProperties[]);
 
 private:
 };

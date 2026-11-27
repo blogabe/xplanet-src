@@ -11,7 +11,7 @@ class DisplayX11 : public DisplayBase
     DisplayX11(const int tr);
     virtual ~DisplayX11();
 
-    void renderImage(PlanetProperties *planetProperties[]);
+    bool renderImage(PlanetProperties *planetProperties[]);
 
     static Window WindowID() { return(window); };
 
