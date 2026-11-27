@@ -40,6 +40,12 @@ The automated checks cover the fork guard without touching the desktop:
 AppKit wallpaper rejects `-fork`, but an AppKit-configured `-fork -output` run
 still produces identical pixels. The legacy `-wa` spelling also renders.
 
+On builds advertising `Frame pipe: 1`, `make check` also exercises the
+actual helper's reader with no GUI: equivalent full-canvas PNGs, legacy
+geometry offsets, separated diagnostics, no file output, and rejection of
+empty, invalid, failed, oversized and timed-out frames. This does not
+exercise the WindowServer, login lifecycle or visible presentation.
+
 Use a disposable GUI session for wallpaper tests. Deny Finder Automation
 and verify that a one-frame Finder run exits nonzero, keeps its diagnostic
 image and skips the post-render hook. An unattended run should log a failed

@@ -2,7 +2,9 @@
 
 **In the current 1.6 draft**, AppKit sets the real macOS wallpaper by default, with Finder available explicitly. Both can accumulate wallpaper history and cache files.
 
-**Chosen direction:** For frequent updates, draw in an AppKit desktop layer while the user is signed in. This avoids creating wallpaper history on every refresh. The trade-off is that macOS retains its own wallpaper for the lock and login screens and reveals it when Xplanet stops. The desktop layer is a prototype, not yet a selectable backend or the shipping default.
+**Chosen direction:** For frequent updates, draw in an AppKit desktop layer while the user is signed in. This avoids creating wallpaper history on every refresh. The trade-off is that macOS retains its own wallpaper for the lock and login screens and reveals it when Xplanet stops. The installed desktop-layer helper is available for controlled opt-in testing
+with a compatible launcher. It is not the default and is not selected by
+`-wallpaper_backend`.
 
 ## The problem
 
@@ -23,13 +25,17 @@ The requirement is to keep storage and gallery entries bounded during ordinary u
 | **Publish less often or pause at a disk budget** | Reduces growth or provides an emergency stop. | Slows or stops the live image and still creates new records. A guard, not prevention. |
 | **Manual cleanup** | Separately clears old disk usage. The surgical draft limits deletion to attributable, old Xplanet cache files and protects active and unrelated entries; a full gallery reset is broader. | Apple's stores are private implementation details. Permissions and the risk of breaking unrelated or inactive wallpapers make unattended pruning a poor default. Neither manual cleanup nor a disk warning prevents growth. |
 
-The AppKit name describes two different uses of the framework here. Calling the wallpaper setter asks macOS to register a file. Presenting a desktop-level window asks the window system to show pixels, not to register wallpaper. The prototype temporarily renders to a private PNG, reads it into memory, removes it, then updates the window. Its steady-state absence of files on disk does not mean the handoff is crash-safe.
+The AppKit name describes two different uses of the framework here. Calling the wallpaper setter asks macOS to register a file. Presenting a desktop-level window asks the window system to show pixels, not to register wallpaper. The packaged helper receives a fresh PNG through a bounded subprocess pipe and
+decodes it in memory. It never stages a frame on disk, and a failed or timed-out
+render does not replace the last good picture. Initial testing is limited to
+the primary display and to one-frame scenes without hooks, auxiliary file
+output, observer-file animation, or renderer-managed hibernation.
 
 ## What the prototype proved
 
 A logged-in macOS guest displayed new Xplanet frames without adding gallery entries or changing the wallpaper caches. The live image remained visible in Mission Control on the active Space. The underlying wallpaper returned when the test ended. This does not establish behavior on other Spaces, at lock or login, or with multiple displays.
 
-The prototype recovered from failed and corrupt renders, but a slow render stalled refreshes. If the renderer exited successfully without writing a file, a pre-existing staging image could be displayed. A hard kill during handoff could also leave a temporary file. These are reasons to keep the prototype out of the current default.
+The original staged-file prototype recovered from failed and corrupt renders, but a slow render stalled refreshes. If the renderer exited successfully without writing a file, a pre-existing staging image could be displayed. A hard kill during handoff could also leave a temporary file. The new fileless handoff addresses these staging-specific failure modes; it does not establish compatibility across desktop lifecycle transitions.
 
 ### Validation details
 
@@ -44,4 +50,4 @@ The prototype recovered from failed and corrupt renders, but a slow render stall
 3. Independently verify no new gallery, PNG or BMP growth over many real refreshes, bounded renderer/desktop-layer memory, and sensible behavior in headless or SSH sessions. Run with representative dimensions and actual release configuration; a small fixture or VM alone is not enough for every claim.
 4. Keep the manual cleanup as separate recovery for existing installations. Do not use routine resets, private preference rewrites, or silent fallback to a setter to make the desktop-layer test pass. If desktop behavior is unacceptable, keep file output and explicit wallpaper-setting choices, and leave the proactive storage problem open rather than imply it is solved.
 
-See the `-wallpaper_backend` section of the [Xplanet manual](../xplanet.1) for the currently implemented choices. The desktop layer has no command-line switch in this draft.
+See the `-wallpaper_backend` section of the [Xplanet manual](../xplanet.1) for the currently implemented choices. The desktop layer is enabled separately by the launcher; returning to the default setting and restarting restores the existing wallpaper setter.

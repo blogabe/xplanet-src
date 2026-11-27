@@ -345,6 +345,24 @@ Options::parseArgs(int argc, char **argv)
             xpExit(string("Invalid numeric value for -") + long_options[option_index].name + ".\n",
                    __FILE__, __LINE__);
 
+        if (FramePipe())
+        {
+            // Reject side effects and multi-frame modes before applying options.
+            switch (this_option)
+            {
+            case FORK: case OUTPUT: case OUTPUT_MAP_RECT: case OUTPUT_START_INDEX:
+            case SAVE_DESKTOP_FILE: case WALLPAPER_BACKEND: case TRANSPNG: case TRANSPARENT:
+            case PREV_COMMAND: case POST_COMMAND: case NUM_TIMES: case ORIGINFILE:
+            case INTERPOLATE_ORIGIN_FILE: case MAKECLOUDMAPS: case MARKER_BOUNDS:
+            case RAYLEIGH_FILE: case WINDOW: case WINDOWTITLE: case XWINID:
+            case VROOT: case HELP: case VERSIONNUMBER: case HIBERNATE:
+            case IDLEWAIT:
+                xpExit(string("Option is not available in desktop frame mode: -")
+                       + long_options[option_index].name + ".\n", __FILE__, __LINE__);
+                break;
+            default: break;
+            }
+        }
         switch (this_option)
         {
         case ARC_FILE:
@@ -452,7 +470,7 @@ Options::parseArgs(int argc, char **argv)
                                            &width, &height);
             geometrySelected_ = ((geometryMask_ & WidthValue) 
                                  && (geometryMask_ & HeightValue));
-            if (SceneValidation::active() && (!geometrySelected_ || width == 0 || height == 0
+            if ((SceneValidation::active() || FramePipe()) && (!geometrySelected_ || width == 0 || height == 0
                                               || width > INT_MAX || height > INT_MAX))
                 xpExit("Invalid -geometry; supply positive WIDTHxHEIGHT.\n", __FILE__, __LINE__);
         }
@@ -981,6 +999,10 @@ Options::parseArgs(int argc, char **argv)
         }
         break;
         case TIMEWARP:
+            // Saved fixed-time scenes use -timewarp 0. Other factors require
+            // a persistent renderer clock, which a one-shot worker cannot keep.
+            if (FramePipe() && (!validSceneNumber(this_option, optarg) || strtod(optarg, nullptr) != 0))
+                xpExit("Only -timewarp 0 is available in desktop frame mode.\n", __FILE__, __LINE__);
             sscanf(optarg, "%lf", &timewarp);
             useCurrentTime_ = false;
             break;
@@ -1006,6 +1028,9 @@ Options::parseArgs(int argc, char **argv)
                 xpExit("-version cannot be combined with -validate.\n", __FILE__, __LINE__);
             printVersion();
             cout << "TLE catalog IDs: Alpha-5" << endl;
+#ifdef HAVE_DESKTOP_LAYER
+            cout << "Frame pipe: 1" << endl;
+#endif
             exit(EXIT_SUCCESS);
             break;
         case VROOT:

@@ -18,19 +18,24 @@ using namespace std;
 #include <Carbon/Carbon.h>
 
 extern "C" {
+#ifdef HAVE_DESKTOP_LAYER
+    int write_png(FILE *, int, int, unsigned char *, unsigned char *);
+#endif
     OSStatus SetDesktopPictureFromCharString(const char *file);
     int SetWallpaperWithAppKit(const char *file, char *failure, size_t capacity);
 }
 
 DisplayMacAqua::DisplayMacAqua(const int tr) : DisplayBase(tr)
 {
-    fullWidth_ = static_cast<int> (CGDisplayPixelsWide(kCGDirectMainDisplay));
-    fullHeight_ = static_cast<int> (CGDisplayPixelsHigh(kCGDirectMainDisplay));
+    Options *options = Options::getInstance();
+    fullWidth_ = options->FramePipe() ? options->FrameWidth()
+        : static_cast<int>(CGDisplayPixelsWide(kCGDirectMainDisplay));
+    fullHeight_ = options->FramePipe() ? options->FrameHeight()
+        : static_cast<int>(CGDisplayPixelsHigh(kCGDirectMainDisplay));
 
     if (fullWidth_ == 0 || fullHeight_ == 0)
         xpExit("Can't set Aqua display\n", __FILE__, __LINE__);
 
-    Options *options = Options::getInstance();
     switch (options->DisplayMode())
     {
     case WINDOW:
@@ -65,6 +70,12 @@ DisplayMacAqua::DisplayMacAqua(const int tr) : DisplayBase(tr)
             options->CenterY(height_/2);
     }
 
+    if (options->FramePipe()
+        && (width_ <= 0 || height_ <= 0 || width_ > 32768 || height_ > 32768
+            || static_cast<long long>(width_) * height_ > 24000000
+            || options->getWindowX() < -32768 || options->getWindowX() > 32768
+            || options->getWindowY() < -32768 || options->getWindowY() > 32768))
+        xpExit("Desktop frame geometry exceeds the supported limits.\n", __FILE__, __LINE__);
     allocateRGBData();
 
 }
@@ -92,6 +103,17 @@ bool
 DisplayMacAqua::renderImage(PlanetProperties *planetProperties[])
 {
     drawLabel(planetProperties);
+    Options *options = Options::getInstance();
+#ifdef HAVE_DESKTOP_LAYER
+    if (FILE *stream = options->FramePipe())
+    {
+        if (options->GeometrySelected()) PlaceImageOnRoot();
+        if (!write_png(stream, fullWidth_, fullHeight_, rgb_data, nullptr)
+            || fflush(stream) != 0 || ferror(stream))
+            xpExit("Cannot write the desktop frame.\n", __FILE__, __LINE__);
+        return true;
+    }
+#endif
 
     // Setting the desktop picture doesn't seem to work if you give it
     // the same filename over and over again.
@@ -103,7 +125,6 @@ DisplayMacAqua::renderImage(PlanetProperties *planetProperties[])
     const string directory(&path[0]);
     const string output = directory + "/wallpaper.png";
 
-    Options *options = Options::getInstance();
     if (options->GeometrySelected()) PlaceImageOnRoot();
 
     Image i(fullWidth_, fullHeight_, rgb_data, alpha);

@@ -65,6 +65,52 @@ AC_USE_MACAQUA
 
 AC_FIND_GRAPHICS_LIBS
 
+AC_ARG_ENABLE([desktop-layer],
+    [AS_HELP_STRING([--enable-desktop-layer],
+                    [build the experimental macOS desktop layer (auto)])],
+    [], [enable_desktop_layer=auto])
+case "$enable_desktop_layer" in
+    auto|yes|no) ;;
+    *) AC_MSG_ERROR([--enable-desktop-layer accepts yes or no]) ;;
+esac
+AC_ARG_VAR([SWIFTC], [Swift compiler used to build xplanet-desktop])
+AC_ARG_VAR([SWIFTFLAGS], [extra Swift compiler flags])
+build_desktop_layer=no
+SWIFT_TARGET=
+if test "$enable_desktop_layer" != no &&
+   test "$have_aqua" = yes && test "$with_aqua" = yes &&
+   test "$have_png" = yes && test "$cross_compiling" = no; then
+    case "$host_cpu" in
+        aarch64) swift_cpu=arm64 ;;
+        *) swift_cpu=$host_cpu ;;
+    esac
+    SWIFT_TARGET="$swift_cpu-apple-macos${MACOSX_DEPLOYMENT_TARGET:-13.0}"
+    AC_PATH_PROG([SWIFTC], [swiftc])
+    if test -n "$SWIFTC"; then
+        AC_MSG_CHECKING([whether Swift can build the macOS desktop layer])
+        cat > conftest.swift <<'END_SWIFT'
+import AppKit
+import ImageIO
+import CryptoKit
+import zlib
+MainActor.assumeIsolated { print(NSApp as Any) }
+END_SWIFT
+        if "$SWIFTC" -target "$SWIFT_TARGET" $SWIFTFLAGS -module-cache-path conftest-desktop-cache conftest.swift -o conftest-desktop >&AS_MESSAGE_LOG_FD 2>&1; then
+            build_desktop_layer=yes
+        fi
+        rm -rf conftest.swift conftest-desktop conftest-desktop-cache
+        AC_MSG_RESULT([$build_desktop_layer])
+    fi
+fi
+if test "$enable_desktop_layer" = yes && test "$build_desktop_layer" != yes; then
+    AC_MSG_ERROR([the desktop layer needs a native macOS Aqua build, PNG, and a working Swift toolchain])
+fi
+if test "$build_desktop_layer" = yes; then
+    AC_DEFINE([HAVE_DESKTOP_LAYER], [1], [Define when building the optional macOS desktop layer])
+fi
+AC_SUBST([SWIFT_TARGET])
+AM_CONDITIONAL([HAVE_DESKTOP_LAYER], [test "$build_desktop_layer" = yes])
+
 AC_FIND_CSPICE
 
 if test "$with_pnm" = yes && test "$have_pnm" != yes; then

@@ -10,3 +10,5 @@ xpDefines.h
 
 
 /dev/
+/src/xplanet-desktop
+/src/.swift-module-cache/
