@@ -1,9 +1,9 @@
 # Xplanet on macOS: wallpaper backend decision
 
-**In the current 1.6 draft**, AppKit sets the real macOS wallpaper by default, with Finder available explicitly. Both can accumulate wallpaper history and cache files.
+**In standalone Xplanet 1.6**, AppKit sets the real macOS wallpaper by default, with Finder available explicitly. Both can accumulate wallpaper history and cache files.
 
-**Chosen direction:** For frequent updates, draw in an AppKit desktop layer while the user is signed in. This avoids creating wallpaper history on every refresh. The trade-off is that macOS retains its own wallpaper for the lock and login screens and reveals it when Xplanet stops. The installed desktop-layer helper is available for controlled opt-in testing
-with a compatible launcher. It is not the default and is not selected by
+**Chosen direction:** For frequent updates, draw in an AppKit desktop layer while the user is signed in. This avoids creating wallpaper history on every refresh. The trade-off is that macOS retains its own wallpaper for the lock and login screens and reveals it when Xplanet stops. The compatible macOS launcher uses the installed helper for managed desktops.
+This does not change standalone renderer defaults and is not selected by
 `-wallpaper_backend`.
 
 ## The problem

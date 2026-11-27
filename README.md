@@ -44,12 +44,12 @@ To keep a legacy Finder command using `-fork`, explicitly choose
 `-wallpaper_backend finder`. This does not change `-output` rendering.
 The current implementation updates the main display only.
 
-The companion `xplanet-desktop` is an experimental, explicit opt-in through
-a compatible [macOS setup and launcher](https://github.com/blogabe/Xplanet).
-It shows live frames on the signed-in desktop without changing the system
-wallpaper or using a staging image. The normal setter and `-output` paths are
-unchanged. See [macOS desktop-layer trade-offs](docs/macos-wallpaper.md)
-for limits and testing. To switch back, remove the launcher opt-in and restart.
+On macOS 13 or newer, the companion `xplanet-desktop` shows live frames on
+the signed-in desktop without changing the system wallpaper or writing a
+staging image. The compatible [macOS launcher](https://github.com/blogabe/Xplanet)
+uses it for managed desktops; invoking `xplanet` directly still uses the
+standalone setter or `-output` as requested. See
+[macOS desktop-layer trade-offs](docs/macos-wallpaper.md) for limits and testing.
 
 ## Render an image
 

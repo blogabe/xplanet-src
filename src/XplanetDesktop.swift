@@ -100,7 +100,7 @@ struct Configuration: Sendable {
     static let usage = """
     Usage: xplanet-desktop /renderer /scene-directory cadence timeout attempt-count -- [renderer options]
       cadence and timeout are in seconds; attempt-count 0 runs until stopped.
-      Use the desktop-layer opt-in in the launcher. No system wallpaper is set.
+      Normally started by the Xplanet launcher. No system wallpaper is set.
     """
     let renderer: URL
     let scene: URL
@@ -355,7 +355,9 @@ do {
         try MainActor.assumeIsolated {
             let layer = try Layer(Configuration(arguments))
             let app = NSApplication.shared
-            app.setActivationPolicy(.prohibited)
+            guard app.setActivationPolicy(.accessory) else {
+                throw Failure("cannot start a Dock-less desktop window")
+            }
             app.delegate = layer
             withExtendedLifetime(layer) { app.run() }
             exit(layer.exitStatus)
