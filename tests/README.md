@@ -30,14 +30,3 @@ directory. They don't use the current user's maps or change the desktop.
 When building from a Git checkout, run `./prepare-build.sh` before configuring
 if timestamps would trigger regeneration. For changes to the build inputs,
 use the pinned regeneration procedure in [the project README](../README.md).
-
-## Continuous integration
-
-The renderer workflow runs `make check` on Linux without X11, on Apple silicon
-with the tap's default features, and in a separate macOS build with CSPICE
-enabled. The CSPICE lane also generates two small offline kernels and checks
-that their different Sun-relative Earth positions change the rendered lighting.
-To reproduce a lane with its build dependencies already installed,
-run `sh tests/ci-build.sh linux`, `sh tests/ci-build.sh macos`, or
-`sh tests/ci-build.sh macos-cspice`. The script builds in a temporary directory
-and does not install Xplanet or publish wallpaper.

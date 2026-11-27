@@ -56,5 +56,5 @@ fi
 make check
 
 if [ "$profile" = macos-cspice ]; then
-    sh "$src/tests/check-cspice.sh" "$PWD/src/xplanet" "$src/xplanet" "$(brew --prefix cspice)"
+    sh "$src/tests/check-cspice.sh" "$PWD/src/xplanet" "$src" "$(brew --prefix cspice)"
 fi
