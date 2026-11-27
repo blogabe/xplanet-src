@@ -1,6 +1,7 @@
 #ifndef OPTIONS_H
 #define OPTIONS_H
 
+#include <cstdio>
 #include <ctime>
 #include <string>
 #include <vector>
@@ -18,6 +19,17 @@ public:
     ~Options();
 
     void parseArgs(int argc, char **argv);
+
+    std::FILE *FramePipe() const { return framePipe_; };
+    int FrameWidth() const { return frameWidth_; };
+    int FrameHeight() const { return frameHeight_; };
+    void FramePipe(std::FILE *stream, int width, int height)
+    {
+        framePipe_ = stream;
+        frameWidth_ = width;
+        frameHeight_ = height;
+        numTimes_ = 1;
+    };
 
     const std::vector<std::string> & ArcFiles() const { return(arcFiles_); };
     double ArcSpacing() const       { return(arcSpacing_); };
@@ -179,6 +191,8 @@ public:
 private:
 
     static Options *instance_;
+    std::FILE *framePipe_ = nullptr;
+    int frameWidth_ = 0, frameHeight_ = 0;
 
     std::vector<std::string> arcFiles_;
     double arcSpacing_;

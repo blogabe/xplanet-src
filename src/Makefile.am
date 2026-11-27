@@ -1,6 +1,16 @@
 SUBDIRS = libannotate libdisplay libephemeris libimage libmultiple libplanet libprojection libsgp4sdp4
 
 bin_PROGRAMS = xplanet
+EXTRA_DIST = XplanetDesktop.swift
+
+if HAVE_DESKTOP_LAYER
+nodist_bin_SCRIPTS = xplanet-desktop
+CLEANFILES = xplanet-desktop
+clean-local:
+	rm -rf .swift-module-cache
+xplanet-desktop: $(srcdir)/XplanetDesktop.swift Makefile
+	"$(SWIFTC)" -target "$(SWIFT_TARGET)" $(SWIFTFLAGS) -module-cache-path .swift-module-cache -O "$(srcdir)/XplanetDesktop.swift" -o "$@"
+endif
 
 EXTRA_xplanet_SOURCES = ParseGeom.c ParseGeom.h
 

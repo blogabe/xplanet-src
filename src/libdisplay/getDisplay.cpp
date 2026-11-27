@@ -24,6 +24,10 @@ DisplayBase *getDisplay(const int times_run)
 {
     Options *options = Options::getInstance();
 
+#ifdef HAVE_DESKTOP_LAYER
+    if (options->FramePipe()) return new DisplayMacAqua(times_run);
+#endif
+
     if (options->DisplayMode() == OUTPUT)
         return(new DisplayOutput(times_run));
 

@@ -1,3 +1,4 @@
+#include <cerrno>
 #include <clocale>
 #include <cstdio>
 #include <cstdlib>
@@ -12,6 +13,10 @@ using namespace std;
 #include <unistd.h>
 
 #include "config.h"
+
+#ifdef HAVE_DESKTOP_LAYER
+#include <fcntl.h>
+#endif
 
 #include "buildPlanetMap.h"
 #include "findBodyXYZ.h"
@@ -51,6 +56,34 @@ setPositions(const vector<LBRPoint> &originVector,
              Planet *&target, map<double, Planet *> &planetMap,
              PlanetProperties *planetProperties[]);
 
+#ifdef HAVE_DESKTOP_LAYER
+namespace
+{
+// Private versioned transport: the GUI helper supplies the main display's pixel
+// dimensions and the remaining argv/cwd are the user's original scene.
+void initFramePipe(Options &options, const char *canvas)
+{
+    char *separator = nullptr;
+    char *end = nullptr;
+    errno = 0;
+    const long w = strtol(canvas, &separator, 10);
+    const long h = *separator == 'x' ? strtol(separator + 1, &end, 10) : 0;
+    if (errno || separator == canvas || !end || end == separator + 1 || *end
+        || w <= 0 || h <= 0 || w > 32768 || h > 32768 || w * h > 24000000)
+        xpExit("Invalid desktop frame dimensions.\n", __FILE__, __LINE__);
+
+    // Protect the binary channel from all renderer diagnostics, including
+    // existing stdout logging and native libraries.
+    const int fd = fcntl(STDOUT_FILENO, F_DUPFD_CLOEXEC, 3);
+    if (fd < 0 || dup2(STDERR_FILENO, STDOUT_FILENO) < 0)
+        xpExit("Cannot initialize the desktop frame channel.\n", __FILE__, __LINE__);
+    FILE *stream = fdopen(fd, "wb");
+    if (!stream) xpExit("Cannot open the desktop frame channel.\n", __FILE__, __LINE__);
+    options.FramePipe(stream, static_cast<int>(w), static_cast<int>(h));
+}
+}
+#endif
+
 int
 main(int argc, char **argv)
 {
@@ -79,6 +112,17 @@ main(int argc, char **argv)
     if (argc > 1 && (strcmp(argv[1], "-validate") == 0
                     || strcmp(argv[1], "--validate") == 0))
         return SceneValidation::run(*options, argc, argv);
+#ifdef HAVE_DESKTOP_LAYER
+    if (argc > 1 && strcmp(argv[1], "--frame-pipe") == 0)
+    {
+        if (argc < 3)
+            xpExit("Desktop frame mode requires WIDTHxHEIGHT.\n", __FILE__, __LINE__);
+        initFramePipe(*options, argv[2]);
+        argv[2] = argv[0];
+        argv += 2;
+        argc -= 2;
+    }
+#endif
     options->parseArgs(argc, argv);
 
     if (options->Fork())

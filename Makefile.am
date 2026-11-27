@@ -50,7 +50,7 @@ nobase_dist_data_DATA = \
 	xplanet/spice/voyager.krn	\
 	xplanet/stars/BSC
 
-EXTRA_DIST = xplanet.1 $(sources) README.md prepare-build.sh docs/macos-wallpaper.md tests/README.md tests/tle_catalog.c tests/map_reduction.cpp tests/image_read.cpp tests/rayleigh_table.cpp tests/orbit_math.cpp tests/parse_token.cpp tests/omm.cpp tests/check-renderer.sh tests/check-validation.sh tests/check-omm.sh
+EXTRA_DIST = xplanet.1 $(sources) README.md prepare-build.sh docs/macos-wallpaper.md tests/README.md tests/tle_catalog.c tests/map_reduction.cpp tests/image_read.cpp tests/rayleigh_table.cpp tests/orbit_math.cpp tests/parse_token.cpp tests/omm.cpp tests/check-renderer.sh tests/check-validation.sh tests/check-omm.sh tests/check-desktop.sh
 
 check-local:
 	@set -e; \
@@ -84,3 +84,4 @@ check-local:
 	$(SHELL) "$(abs_srcdir)/tests/check-renderer.sh" "$(abs_builddir)/src/xplanet" "$(abs_srcdir)/xplanet"
 	$(SHELL) "$(abs_srcdir)/tests/check-omm.sh" "$(abs_builddir)/src/xplanet" "$(abs_srcdir)/xplanet"
 	$(SHELL) "$(abs_srcdir)/tests/check-validation.sh" "$(abs_builddir)/src/xplanet" "$(abs_srcdir)"
+	$(SHELL) "$(abs_srcdir)/tests/check-desktop.sh" "$(abs_builddir)/src/xplanet" "$(abs_builddir)/src/xplanet-desktop" "$(abs_srcdir)/xplanet"

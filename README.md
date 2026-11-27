@@ -44,6 +44,13 @@ To keep a legacy Finder command using `-fork`, explicitly choose
 `-wallpaper_backend finder`. This does not change `-output` rendering.
 The current implementation updates the main display only.
 
+On macOS 13 or newer, the companion `xplanet-desktop` shows live frames on
+the signed-in desktop without changing the system wallpaper or writing a
+staging image. The compatible [macOS launcher](https://github.com/blogabe/Xplanet)
+uses it for managed desktops; invoking `xplanet` directly still uses the
+standalone setter or `-output` as requested. See
+[macOS desktop-layer trade-offs](docs/macos-wallpaper.md) for limits and testing.
+
 ## Render an image
 
 With Xplanet installed, run:
@@ -198,7 +205,14 @@ make install
 
 The binary is installed at `$HOME/.local/bin/xplanet`. For a macOS source
 build with wallpaper support, configure with `--with-aqua --without-x`
-and make the codec and font libraries available to the build.
+and make the codec and font libraries available to the build. With PNG and a
+working Swift toolchain, native macOS builds also compile and install
+`xplanet-desktop` next to the renderer. `--enable-desktop-layer` makes these
+prerequisites mandatory for packaging; `--disable-desktop-layer` leaves the helper
+out. The helper targets macOS 13 or newer by default (or the build's
+`MACOSX_DEPLOYMENT_TARGET`). The compiler is needed for the build, not for
+launching the installed helper. Only paired builds advertise `Frame pipe: 1`
+in `xplanet -version`.
 
 See [the test notes](tests/README.md) for what `make check` covers. The
 original [README](README) is preserved as a historical option reference.

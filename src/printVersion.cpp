@@ -25,6 +25,9 @@ printVersion()
 #ifdef HAVE_AQUA
     cout << "\tMac OS X\n";
     cout << "\tWallpaper backends: appkit, finder\n";
+#ifdef HAVE_DESKTOP_LAYER
+    cout << "\tDesktop layer\n";
+#endif
 #endif
 
 #ifdef HAVE_CYGWIN
