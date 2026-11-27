@@ -1,0 +1,72 @@
+name: Intel macOS release check
+
+on:
+  push:
+    branches: [test/intel-macos-1.4.0]
+
+permissions:
+  contents: read
+
+jobs:
+  intel-release:
+    runs-on: macos-26-intel
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: d5a05dccd7786db3bef05b83f3a460789feb1abb
+          persist-credentials: false
+      - name: Verify checkout and install Intel dependencies
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: 1
+        run: |
+          test "$(uname -s):$(uname -m)" = Darwin:x86_64
+          test "$(git rev-parse HEAD)" = d5a05dccd7786db3bef05b83f3a460789feb1abb
+          sw_vers
+          brew install pkgconf freetype giflib jpeg-turbo libpng libtiff
+      - name: Package, build, check and install
+        shell: bash
+        run: |
+          set -euo pipefail
+          export LC_ALL=C
+          work="$(mktemp -d "$RUNNER_TEMP/xplanet-intel.XXXXXX")"
+          for package in freetype giflib jpeg-turbo libpng libtiff; do
+            prefix="$(brew --prefix "$package")"
+            CPPFLAGS="${CPPFLAGS:-} -I$prefix/include"
+            LDFLAGS="${LDFLAGS:-} -L$prefix/lib"
+            PKG_CONFIG_PATH="$prefix/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+          done
+          export CPPFLAGS LDFLAGS PKG_CONFIG_PATH
+          args=(--disable-dependency-tracking "--prefix=$work/install"
+                --with-aqua --without-cspice --without-cygwin --without-x
+                --without-xscreensaver --with-gif --with-jpeg --with-png
+                --with-tiff --without-pango --without-pnm)
+          sh "$GITHUB_WORKSPACE/prepare-build.sh"
+          mkdir "$work/dist" "$work/build" "$work/smoke" "$work/home"
+          cd "$work/dist"
+          "$GITHUB_WORKSPACE/configure" "${args[@]}"
+          make dist
+          archive="$PWD/xplanet-1.4.0.tar.gz"
+          shasum -a 256 "$archive"
+          tar -xf "$archive" -C "$work"
+          cd "$work/build"
+          export AUTOCONF=false AUTOMAKE=false ACLOCAL=false AUTOHEADER=false
+          "$work/xplanet-1.4.0/configure" "${args[@]}"
+          make -j 3
+          make check
+          make install
+          binary="$work/install/bin/xplanet"
+          test "$(lipo -archs "$binary")" = x86_64
+          "$binary" -version | tee "$work/version.txt"
+          grep -q '^Xplanet 1\.4\.0' "$work/version.txt"
+          grep -qx 'TLE catalog IDs: Alpha-5' "$work/version.txt"
+          for feature in GIF JPEG PNG TIFF FreeType; do
+            grep -Eiq "^[[:space:]]+$feature([[:space:]]|$)" "$work/version.txt"
+          done
+          cd "$work/smoke"
+          export HOME="$work/home"
+          "$binary" -target earth -projection rectangular -date 20261125.120000 \
+            -geometry 320x160 -num_times 1 -output earth.png
+          test "$(od -An -tx1 -N24 earth.png | tr -d '[:space:]')" = \
+            89504e470d0a1a0a0000000d4948445200000140000000a0
+          echo 'Installed x86_64 renderer generated a valid fixed-date 320x160 Earth PNG.'
