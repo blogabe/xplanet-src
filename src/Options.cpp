@@ -41,6 +41,14 @@ extern "C" {
 extern void
 printVersion();
 
+static size_t
+outputSuffix(const string &name)
+{
+    const size_t base = name.rfind('/') + 1;
+    const size_t dot = name.rfind('.');
+    return dot != string::npos && dot > base ? dot : string::npos;
+}
+
 Options* Options::instance_ = NULL;
 
 Options*
@@ -52,7 +60,7 @@ Options::getInstance()
 
 Options::~Options()
 {
-//    delete instance_;
+    //    delete instance_;
 }
 
 Options::Options() :
@@ -212,6 +220,7 @@ Options::parseArgs(int argc, char **argv)
             {"fontsize",       required_argument, NULL, FONTSIZE},
             {"fork",           no_argument,       NULL, FORK},
             {"fov",            required_argument, NULL, FOV},
+            {"help",           no_argument,       NULL, HELP},
             {"geometry",       required_argument, NULL, GEOMETRY},
             {"glare",          required_argument, NULL, GLARE},
             {"gmtlabel",       no_argument,       NULL, UTCLABEL},
@@ -312,6 +321,8 @@ Options::parseArgs(int argc, char **argv)
             int x, y;
             int mask = XParseGeometry(optarg, &x, &y, &w, &h);
             centerSelected_ = ((mask & XValue) && (mask & YValue));
+            if (!centerSelected_)
+                xpExit("Invalid -center; use +x+y.\n", __FILE__, __LINE__);
             centerX_ = x;
             centerY_ = y;
         }
@@ -323,25 +334,11 @@ Options::parseArgs(int argc, char **argv)
             configFile_ = optarg;
             break;
         case DATE:
-        {
-            long int yyyymmdd, hhmmss;
-            sscanf(optarg, "%ld.%ld", &yyyymmdd, &hhmmss);
-            int yyyymm = yyyymmdd / 100;
-            int year = yyyymm/100;
-            int month = abs(yyyymm - year * 100);
-            int day = abs((int) yyyymmdd - yyyymm * 100);
-
-            int hhmm = hhmmss / 100;
-            int hour = hhmm / 100;
-            int min = hhmm - hour * 100;
-            int sec = hhmmss - hhmm * 100;
-
-            julianDay_ = toJulian(year, month, day, hour, min, sec);
+            if (!parseRenderDate(optarg, julianDay_))
+                xpExit("Invalid -date; use YYYYMMDD[.HHMMSS] in UTC.\n", __FILE__, __LINE__);
             tv_sec = get_tv_sec(julianDay_);
-
             useCurrentTime_ = false;
-        }
-        break;
+            break;
         case DATE_FORMAT:
             dateFormat_ = optarg;
             break;
@@ -356,14 +353,14 @@ Options::parseArgs(int argc, char **argv)
 #ifdef HAVE_LIBFREETYPE
             font_.assign(optarg);
 #else
-            {
-                ostringstream errMsg;
-                errMsg << "Sorry, this binary was built without FreeType "
+        {
+            ostringstream errMsg;
+            errMsg << "Sorry, this binary was built without FreeType "
                        << "support. The -" 
                        << long_options[option_index].name 
                        << " option will be ignored.\n";
-                xpWarn(errMsg.str(), __FILE__, __LINE__);
-            }
+            xpWarn(errMsg.str(), __FILE__, __LINE__);
+        }
 #endif
             break;
         case FONTSIZE:
@@ -409,8 +406,9 @@ Options::parseArgs(int argc, char **argv)
         case GLARE:
         { 
             double g;
-            sscanf(optarg, "%lf", &g);
-            if (g >= 0) glare_ = g;
+            if (sscanf(optarg, "%lf", &g) != 1 || !std::isfinite(g) || g < 0)
+                xpExit("Invalid -glare; expected a nonnegative number.\n", __FILE__, __LINE__);
+            glare_ = g;
         }
         break;
         case GRS_LON:
@@ -430,10 +428,17 @@ Options::parseArgs(int argc, char **argv)
             interpolateOriginFile_ = true;
             break;
         case JDATE:
-            sscanf(optarg, "%lf", &julianDay_);
+        {
+            char *end;
+            julianDay_ = strtod(optarg, &end);
+            if (end == optarg || *end != '\0' || !std::isfinite(julianDay_)
+                || fabs(julianDay_) > 1e7)
+                xpExit("Invalid -jdate; expected a supported Julian day number.\n",
+                       __FILE__, __LINE__);
             tv_sec = get_tv_sec(julianDay_);
             useCurrentTime_ = false;
-            break;
+        }
+        break;
         case JPL_FILE:
             jplFile_ = optarg;
             break;
@@ -622,15 +627,17 @@ Options::parseArgs(int argc, char **argv)
             // fall through to OUTPUT block
         case OUTPUT:
             outputBase_ = optarg;
-            if (outputBase_.find('.') == string::npos)
+            if (outputBase_.empty() || outputBase_[outputBase_.size() - 1] == '/')
+                xpExit("Expected an image filename for -output.\n", __FILE__, __LINE__);
+            if (outputSuffix(outputBase_) == string::npos)
             {
-                outputExt_ = defaultMapExt;
+                outputExt_ = transpng_ ? ".png" : defaultMapExt;
             }
             else
             {
-                outputExt_.assign(outputBase_, outputBase_.rfind('.'), 
+                outputExt_.assign(outputBase_, outputSuffix(outputBase_),
                                   outputBase_.size());
-                outputBase_.assign(outputBase_, 0, outputBase_.rfind('.'));
+                outputBase_.assign(outputBase_, 0, outputSuffix(outputBase_));
             }
 
             displayMode_ = OUTPUT;
@@ -639,11 +646,13 @@ Options::parseArgs(int argc, char **argv)
         case OUTPUT_MAP_RECT:
         {
             string base = optarg;
+            if (base.empty() || base[base.size() - 1] == '/')
+                xpExit("Expected an image filename for -output_map.\n", __FILE__, __LINE__);
             string ext = defaultMapExt;
-            if (base.find('.') != string::npos)
+            if (outputSuffix(base) != string::npos)
             {
-                ext.assign(base, base.rfind('.'), base.size());
-                base.assign(base, 0, base.rfind('.'));
+                ext.assign(base, outputSuffix(base), base.size());
+                base.assign(base, 0, outputSuffix(base));
             }
             outputMapRect_ = base + ext;
         }
@@ -655,13 +664,13 @@ Options::parseArgs(int argc, char **argv)
 #ifdef HAVE_LIBPANGOFT2 
             pango_ = true;
 #else
-            {
-                ostringstream errMsg;
-                errMsg << "Sorry, this binary was built without Pango "
+        {
+            ostringstream errMsg;
+            errMsg << "Sorry, this binary was built without Pango "
                        << "support. The -" << long_options[option_index].name 
                        << " option will be ignored.\n";
-                xpWarn(errMsg.str(), __FILE__, __LINE__);
-            }
+            xpWarn(errMsg.str(), __FILE__, __LINE__);
+        }
 #endif
             break;
         case PATH_RELATIVE_TO:
@@ -925,6 +934,7 @@ Options::parseArgs(int argc, char **argv)
             break;
         case VERSIONNUMBER:
             printVersion();
+            cout << "TLE catalog IDs: Alpha-5" << endl;
             exit(EXIT_SUCCESS);
             break;
         case VROOT:
@@ -955,11 +965,10 @@ Options::parseArgs(int argc, char **argv)
         }
         break;
         case XYZFILE:
-        {
-            XYZFile_ = optarg;
-        }
-        default:
-        case UNKNOWN:
+            xpExit("-XYZ_file is unavailable; use -origin_file for observer paths.\n",
+                   __FILE__, __LINE__);
+            break;
+        case HELP:
         {
             cout << "Valid options to Xplanet are:\n";
             unsigned int i = 0;
@@ -974,7 +983,20 @@ Options::parseArgs(int argc, char **argv)
             exit(EXIT_SUCCESS);
         }
         break;
+        default:
+        case UNKNOWN:
+            xpExit("Invalid option or missing argument. See -help.\n", __FILE__, __LINE__);
+            break;
         }
+    }
+
+    if (transpng_)
+    {
+        string extension = outputExt_;
+        for (size_t i = 0; i < extension.size(); ++i)
+            extension[i] = static_cast<char>(tolower(static_cast<unsigned char>(extension[i])));
+        if (extension != ".png")
+            xpExit("-transpng requires a PNG output filename.\n", __FILE__, __LINE__);
     }
 
     if (optind < argc)

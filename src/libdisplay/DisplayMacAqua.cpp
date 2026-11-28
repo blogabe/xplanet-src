@@ -2,6 +2,8 @@
 #include <cstring>
 #include <fstream>
 #include <sstream>
+#include <vector>
+#include <unistd.h>
 using namespace std;
 
 #include "keywords.h"
@@ -16,7 +18,7 @@ using namespace std;
 #include <Carbon/Carbon.h>
 
 extern "C" {
-    bool SetDesktopPictureFromCharString(const char *file);
+    OSStatus SetDesktopPictureFromCharString(const char *file);
 }
 
 DisplayMacAqua::DisplayMacAqua(const int tr) : DisplayBase(tr)
@@ -70,6 +72,19 @@ DisplayMacAqua::~DisplayMacAqua()
 {
 }
 
+namespace
+{
+void
+removeWallpaperDirectory(const string &path)
+{
+    if (path.empty()) return;
+    unlink((path + "/wallpaper.png").c_str());
+    rmdir(path.c_str());
+}
+
+string lastFailedWallpaper;
+}
+
 // This was pretty much written by trial and error once I found
 // DesktopPicture.m on developer.apple.com
 void 
@@ -79,48 +94,58 @@ DisplayMacAqua::renderImage(PlanetProperties *planetProperties[])
 
     // Setting the desktop picture doesn't seem to work if you give it
     // the same filename over and over again.
-    char templateFile[16];
-    strncpy(templateFile, "Xplanet.XXXXXX", 16);
-    char *tmpFile = mktemp(templateFile);
-
-    ostringstream outputStream;
-    outputStream << TmpDir() << "/" << tmpFile << ".png";
+    const string pattern = TmpDir() + "/Xplanet.XXXXXX";
+    vector<char> path(pattern.begin(), pattern.end());
+    path.push_back('\0');
+    if (mkdtemp(&path[0]) == NULL)
+        xpExit("Cannot create a private wallpaper staging directory.\n", __FILE__, __LINE__);
+    const string directory(&path[0]);
+    const string output = directory + "/wallpaper.png";
 
     Options *options = Options::getInstance();
     if (options->GeometrySelected()) PlaceImageOnRoot();
 
     Image i(fullWidth_, fullHeight_, rgb_data, alpha);
-    if (!i.Write(outputStream.str().c_str()))
+    if (!i.Write(output.c_str()))
     {
+        removeWallpaperDirectory(directory);
         ostringstream errStr;
-        errStr << "Can't create image file " << outputStream.str() << "\n";
+        errStr << "Can't create image file " << output << "\n";
         xpExit(errStr.str(), __FILE__, __LINE__);
     }
 
     if (options->Verbosity() > 1)
     {
         ostringstream msg;
-        msg << "Created image file " << outputStream.str() << "\n";
+        msg << "Created image file " << output << "\n";
         xpMsg(msg.str(), __FILE__, __LINE__);
     }
 
-    // This sometimes doesn't set the background correctly, but
-    // doesn't return false in those cases.  Hopefully the real API to
-    // set the desktop will be available soon.
-    sleep(1);
-    if (!SetDesktopPictureFromCharString(outputStream.str().c_str()))
+    OSStatus status = SetDesktopPictureFromCharString(output.c_str());
+    if (status != noErr)
     {
+        removeWallpaperDirectory(lastFailedWallpaper);
+        lastFailedWallpaper = directory;
         ostringstream errStr;
-        errStr << "Failed to set desktop from " 
-               << outputStream.str() << "\n";
+        errStr << "Failed to set desktop (macOS error " << status
+               << "); image retained at " << output << "\n";
+        if (status == errAEEventNotPermitted)
+        {
+            errStr << "Finder Automation access was denied. In System Settings > "
+                   << "Privacy & Security > Automation, allow Xplanet or the app "
+                   << "that launched it to control Finder.\n"
+                   << "Recovery: https://github.com/blogabe/Xplanet/blob/main/"
+                   << "docs/management.md#finder-automation-permission\n";
+        }
         xpWarn(errStr.str(), __FILE__, __LINE__);
+        return;
     }
 
-    // I have no idea, but maybe the failure to set the desktop is
-    // because the Apple Event runs inside a thread or something.
-    // Sleep for a second before removing the temporary file to give
-    // it some time.
+    // Finder has acknowledged the request. Retain the existing grace period
+    // for the wallpaper display before removing the temporary image.
     sleep(1);
+    removeWallpaperDirectory(lastFailedWallpaper);
+    lastFailedWallpaper.clear();
     if (!options->SaveDesktopFile())
-        unlinkFile(outputStream.str().c_str());
+        removeWallpaperDirectory(directory);
 }

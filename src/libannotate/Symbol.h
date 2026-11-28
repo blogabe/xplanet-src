@@ -5,7 +5,7 @@
 
 class Symbol : public Annotation
 {
- public:
+public:
     Symbol(const unsigned char color[3], 
            const int x, const int y, const int r);
 
@@ -16,7 +16,7 @@ class Symbol : public Annotation
     virtual void Shift(const int x) { x_ += x; };
     virtual void Draw(DisplayBase *display);
 
- private:
+private:
     int x_;
     const int y_, r_;
     bool outlined_;

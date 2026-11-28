@@ -6,6 +6,7 @@
 #include <cstring>
 #include <ctime>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <string>
 using namespace std;
@@ -31,6 +32,7 @@ extern char **environ;
 #endif
 
 #include "Options.h"
+#include "OrbitMath.h"
 #include "xpUtil.h"
 
 void 
@@ -47,6 +49,33 @@ xpExit(const string &message, const char *file, const int line)
 #endif
 
     exit(EXIT_FAILURE);
+}
+
+RecordStatus
+readBoundedRecord(istream &input, char *line, size_t size,
+                  const string &path, size_t &number)
+{
+    if (input.getline(line, size))
+    {
+        ++number;
+        return RecordStatus::Valid;
+    }
+    if (input.eof() || input.bad()) return RecordStatus::End;
+    input.clear();
+    input.ignore(numeric_limits<streamsize>::max(), '\n');
+    xpWarn(path + ":" + to_string(++number) + ": ignoring an overlong record.\n",
+           __FILE__, __LINE__);
+    return RecordStatus::Invalid;
+}
+
+bool
+nextAnnotationRecord(istream &input, char *line, size_t size,
+                     const string &path, size_t &number)
+{
+    RecordStatus status;
+    do { status = readBoundedRecord(input, line, size, path, number); }
+    while (status == RecordStatus::Invalid);
+    return status == RecordStatus::Valid;
 }
 
 void 
@@ -98,6 +127,26 @@ removeFromEnvironment(const char *name)
 
 #endif
 }
+
+ScopedTimeZone::ScopedTimeZone(const char *zone)
+    : hadPrevious_(false), changed_(false)
+{
+    if (zone == NULL) return;
+    const char *current = getenv("TZ");
+    hadPrevious_ = current != NULL;
+    if (hadPrevious_) previous_ = current;
+    changed_ = (setenv("TZ", zone, 1) == 0);
+    if (changed_) tzset();
+}
+
+ScopedTimeZone::~ScopedTimeZone()
+{
+    if (!changed_) return;
+    if (hadPrevious_) setenv("TZ", previous_.c_str(), 1);
+    else removeFromEnvironment("TZ");
+    tzset();
+}
+
 
 void
 unlinkFile(const char *name)
@@ -151,11 +200,7 @@ ndot(const double a[3], const double b[3])
 double
 normalize(double a[3])
 {
-    const double length = dot(a, a);
-    if (length > 0)
-        for (int i = 0; i < 3; i++) a[i] /= length;
-
-    return(length);
+    return normalizeVector(a);
 }
 
 void
@@ -234,7 +279,7 @@ RADecToXYZ(double RA, double Dec, double &X, double &Y, double &Z)
 
 void
 fromJulian(double jd, int &year, int &month, int &day, 
-           int &hour, int &min, double &sec)
+                int &hour, int &min, double &sec)
 {
     jd += 0.5;
     int Z = (int) jd;
@@ -304,30 +349,41 @@ get_tv_sec(double jd)
     fromJulian(jd, year, month, day, hour, min, sec);
 
     tm tm_struct = { (int) floor(sec + 0.5), min, hour, day,
-                     month - 1, year - 1900, 0, 0, -1 };
+                    month - 1, year - 1900, 0, 0, -1 };
 
 #ifdef HAVE_TIMEGM
     time_t returnval = timegm(&tm_struct);
 #else
-    string tz_save = "";
-    char *get_tz = getenv("TZ");
-    if (get_tz != NULL)
-    {
-        tz_save = "TZ=";
-        tz_save += get_tz;
-    }
-    putenv("TZ=UTC");
-    tzset();
-
+    ScopedTimeZone timezone("UTC");
     time_t returnval = mktime(&tm_struct);
-
-    if (tz_save.empty()) 
-        removeFromEnvironment("TZ"); 
-    else
-        putenv((char *) tz_save.c_str()); 
-    tzset();
 #endif
     return(returnval);
+}
+
+bool
+parseRenderDate(const string &date, double &julianDay)
+{
+    const size_t dot = date.find('.');
+    const size_t end = dot == string::npos ? date.size() : dot;
+    const size_t first = !date.empty() && date[0] == '-' ? 1 : 0;
+    if (end != first + 8) return false;
+    if (dot != string::npos && (date.size() == dot + 1 || date.size() - dot - 1 > 6))
+        return false;
+    for (size_t i = first; i < date.size(); ++i)
+        if (i != dot && (date[i] < '0' || date[i] > '9')) return false;
+    const int year = atoi(date.substr(0, first + 4).c_str());
+    const int month = atoi(date.substr(first + 4, 2).c_str());
+    const int day = atoi(date.substr(first + 6, 2).c_str());
+    const int time = dot == string::npos ? 0 : atoi(date.c_str() + dot + 1);
+    const int hour = time / 10000, minute = time / 100 % 100, second = time % 100;
+    if (month < 1 || month > 12 || hour > 23 || minute > 59 || second > 59)
+        return false;
+    const int days[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+    const bool leap = year % 4 == 0 &&
+        (year < 1582 || year % 100 != 0 || year % 400 == 0);
+    if (day < 1 || day > days[month - 1] + (month == 2 && leap)) return false;
+    julianDay = toJulian(year, month, day, hour, minute, second);
+    return true;
 }
 
 double 
@@ -476,7 +532,7 @@ delT(const double jd)
         }
     }
 
-/* 
+    /*
     int year, month, day, hour, min;
     double sec;
     fromJulian(jd, year, month, day, hour, min, sec);
@@ -574,15 +630,7 @@ calcGreatArc(const double lat1, const double lon1,
 double
 kepler(const double e, double M)
 {
-    double E = M = fmod(M, TWO_PI);
-    double delta = 1;
-
-    while (fabs(delta) > 1E-10)
-    {
-        delta = (M + e * sin(E) - E)/(1 - e * cos(E));
-        E += delta;
-    }
-    return(E);
+    return ellipticAnomaly(e, fmod(M, TWO_PI));
 }
 
 //  Precess rectangular coordinates in B1950 frame to J2000 using
@@ -614,94 +662,60 @@ photoFunction(const double x)
     return(sqrt(x));
 }
 
-static void
+static bool
 convertEncoding(const bool toNative, ICONV_CONST char *inBuf, char *outBuf)
 {
+    const size_t length = strlen(inBuf);
+    if (length >= MAX_LINE_LENGTH) return false;
 #ifdef NO_ICONV
-    memcpy(outBuf, inBuf, MAX_LINE_LENGTH);
+    memcpy(outBuf, inBuf, length + 1);
+    return true;
 #else
 #ifdef HAVE_LIBCHARSET
     const char *encoding = locale_charset();
 #else
     const char *encoding = nl_langinfo(CODESET);
 #endif
-    const char *fromCode = (toNative ? "UTF-8" : encoding);
-    const char *toCode =   (toNative ? encoding : "UTF-8");
+    const char *fromCode = toNative ? "UTF-8" : encoding;
+    const char *toCode = toNative ? encoding : "UTF-8";
     iconv_t conv = iconv_open(toCode, fromCode);
-    if (conv != (iconv_t) -1)
-    {
-        size_t inbytesleft = strlen(inBuf);
-        size_t outbytesleft = MAX_LINE_LENGTH;
-        while (inbytesleft != (size_t) 0)
-        {
-            size_t retVal = iconv(conv, &inBuf, &inbytesleft, 
-                                  &outBuf, &outbytesleft);
-            if (retVal == (size_t) -1)
-            {
-                ostringstream errStr;
-                errStr << "Can't convert sequence " << inBuf 
-                       << " from encoding " << fromCode
-                       << " to encoding " << toCode << endl;
-                switch (errno)
-                {
-                case EINVAL:
-                    errStr << "Incomplete character or shift sequence "
-                           << "(EINVAL)\n";
-                    break;
-                case E2BIG:
-                    errStr << "Lack of space in output buffer (E2BIG)\n";
-                    break;
-                case EILSEQ:
-                    errStr << "Illegal character or shift sequence "
-                           << "(EILSEQ)\n";
-                    break;
-                case EBADF:
-                    errStr << "Invalid conversion descriptor (EBADF)\n";
-                    break;
-                default:
-                    errStr << "Unknown iconv error\n";
-                }
-                xpWarn(errStr.str(), __FILE__, __LINE__);
-                iconv_close(conv);
-                return;
-            }
-        }
-        iconv_close(conv);
-    }
-    else
-    {
-        ostringstream errStr;
-        errStr << "iconv_open() failed, fromCode is " << fromCode 
-               << ", toCode is " << toCode << "\n";
-        xpWarn(errStr.str(), __FILE__, __LINE__);
-    }
+    if (conv == (iconv_t) -1) return false;
+
+    size_t inputLeft = length;
+    size_t outputLeft = MAX_LINE_LENGTH - 1;
+    const bool ok = iconv(conv, &inBuf, &inputLeft, &outBuf, &outputLeft) != (size_t) -1
+        && inputLeft == 0
+        && iconv(conv, NULL, NULL, &outBuf, &outputLeft) != (size_t) -1;
+    *outBuf = '\0';
+    iconv_close(conv);
+    return ok;
 #endif
 }
 
 void
 strftimeUTF8(string &timeString)
 {
-    // This is the input string, with formatting characters
-    char buffer_UTF8[MAX_LINE_LENGTH];
-    memset(buffer_UTF8, 0, MAX_LINE_LENGTH);
-    strncpy(buffer_UTF8, timeString.c_str(), MAX_LINE_LENGTH);
+    if (timeString.empty()) return;
+    char utf8[MAX_LINE_LENGTH];
+    char format[MAX_LINE_LENGTH];
+    char native[MAX_LINE_LENGTH];
+    time_t seconds = Options::getInstance()->TVSec();
+    const tm *local = localtime(&seconds);
 
-    // Convert to native encoding
-    char buffer_native_format[MAX_LINE_LENGTH];
-    memset(buffer_native_format, 0, MAX_LINE_LENGTH);
-    convertEncoding(true, buffer_UTF8, buffer_native_format);
-
-    // Run it through strftime()
-    char buffer_native[MAX_LINE_LENGTH];
-    Options *options = Options::getInstance();
-    time_t tv_sec = options->TVSec();
-    strftime(buffer_native, MAX_LINE_LENGTH, 
-             buffer_native_format, 
-             localtime((time_t *) &tv_sec));
-
-    // Convert back to UTF8
-    convertEncoding(false, buffer_native, buffer_UTF8);
-    timeString.assign(buffer_UTF8);
+    if (timeString.size() >= sizeof(utf8) || local == NULL)
+    {
+        timeString.clear();
+        return;
+    }
+    memcpy(utf8, timeString.c_str(), timeString.size() + 1);
+    if (!convertEncoding(true, utf8, format)
+        || strftime(native, sizeof(native), format, local) == 0
+        || !convertEncoding(false, native, utf8))
+    {
+        timeString.clear();
+        return;
+    }
+    timeString.assign(utf8);
 }
 
 char *

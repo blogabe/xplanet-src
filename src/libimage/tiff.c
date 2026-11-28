@@ -23,89 +23,65 @@
 
 #include <tiffio.h>
 
+#include "ImageReadLimits.h"
+
 int
 read_tiff(const char *filename, int *width, int *height, unsigned char **rgb)
 {
-    unsigned char *ptr = NULL;
-    int i, j, istart;
+    TIFF *tif = TIFFOpen(filename, "r");
+    if (tif == NULL) return 0;
 
-    TIFF* tif = TIFFOpen(filename, "r");
+    uint32_t w, h;
+    size_t area;
+    uint32_t *raster = NULL;
+    unsigned char *pixels = NULL;
+    int ok = 0;
+    if (!TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &w)
+        || !TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &h)
+        || !image_read_area(w, h, 7, "TIFF", &area))
+        goto cleanup;
 
-    uint32 w, h;
-    uint32* raster;
-  
-    TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &w);
-    TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &h);
+    raster = malloc(area * sizeof(*raster));
+    if (raster == NULL
+        || !TIFFReadRGBAImageOriented(tif, w, h, raster, ORIENTATION_TOPLEFT, 1))
+        goto cleanup;
 
-    *width = (int) w;
-    *height = (int) h;
-
-    raster = _TIFFmalloc(w * h * sizeof(uint32));
-    if (raster != NULL) 
+    pixels = malloc(3 * area);
+    if (pixels == NULL) goto cleanup;
+    for (size_t i = 0; i < area; ++i)
     {
-        rgb[0] = (unsigned char *) realloc(rgb[0], 3 * *width * *height);
-        if (rgb[0] == NULL)
-        {
-            fprintf(stderr, "Can't allocate memory for TIFF file.\n");
-            return(0);
-        }
-
-        ptr = rgb[0];
-
-        if (TIFFReadRGBAImage(tif, w, h, raster, 0)) 
-        {
-            for (j = h - 1; j >= 0; j--)
-            {
-                istart = j * w;
-                for (i = 0; i < w; i++)
-                {
-                    *ptr++ = (unsigned char) TIFFGetR(raster[istart + i]);
-                    *ptr++ = (unsigned char) TIFFGetG(raster[istart + i]);
-                    *ptr++ = (unsigned char) TIFFGetB(raster[istart + i]);
-                }
-            }
-        }
-        else
-        {
-            _TIFFfree(raster);
-            return(0);
-        }
-        _TIFFfree(raster);
+        pixels[3*i] = TIFFGetR(raster[i]);
+        pixels[3*i + 1] = TIFFGetG(raster[i]);
+        pixels[3*i + 2] = TIFFGetB(raster[i]);
     }
-    else 
-        return(0);
+    *width = w;
+    *height = h;
+    *rgb = pixels;
+    ok = 1;
 
+cleanup:
+    free(raster);
     TIFFClose(tif);
-    return(1);
+    return ok;
 }
 
 int
-write_tiff(const char *filename, int width, int height, unsigned char *rgb)
+write_tiff(FILE *file, int width, int height, unsigned char *rgb)
 {
-    unsigned char *raster;
-    int j;
-  
-    TIFF* tif = TIFFOpen(filename, "w");
+    /* Let the shared writer close the descriptor and check its status. */
+    TIFF *tif = TIFFFdOpen(fileno(file), "Xplanet output", "w");
+    if (tif == NULL) return 0;
 
-    if (tif == NULL) 
-    {
-        fprintf(stderr, "Can't create TIFF file\n");
-        return(0);
-    }
-
-    TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, 8);
-    TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, (uint32) width);
-    TIFFSetField(tif, TIFFTAG_IMAGELENGTH, (uint32) height);
-    TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
-    TIFFSetField(tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
-    TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tif, -1));
-    TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, 3);
-    for (j = 0; j < height; j++)
-    {
-        raster = rgb + (j * width * 3);
-        TIFFWriteScanline(tif, raster, j, 0);
-    }
-
-    TIFFClose(tif);
-    return(1);
+    int ok = TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, 8)
+        && TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, (uint32_t) width)
+        && TIFFSetField(tif, TIFFTAG_IMAGELENGTH, (uint32_t) height)
+        && TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB)
+        && TIFFSetField(tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG)
+        && TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, 3)
+        && TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(tif, 0));
+    for (int j = 0; ok && j < height; ++j)
+        ok = TIFFWriteScanline(tif, rgb + j * width * 3, j, 0) == 1;
+    if (ok) ok = TIFFFlush(tif);
+    TIFFCleanup(tif);
+    return ok;
 }

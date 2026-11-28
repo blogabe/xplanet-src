@@ -5,14 +5,14 @@
 
 class ProjectionBonne : public ProjectionBase
 {
- public:
+public:
     ProjectionBonne(const int f, const int w, const int h);
     bool pixelToSpherical(const double x, const double y, 
-			  double &lon, double &lat);
+                          double &lon, double &lat);
 
     bool sphericalToPixel(double lon, double lat, double &x, double &y) const;
 
- private:
+private:
     bool sfl_;
 
     double lat1_, cotLat1_;

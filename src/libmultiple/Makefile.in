@@ -211,8 +211,6 @@ ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
-FREETYPE2_CFLAGS = @FREETYPE2_CFLAGS@
-FREETYPE2_LIBS = @FREETYPE2_LIBS@
 FREETYPE_CFLAGS = @FREETYPE_CFLAGS@
 FREETYPE_LIBS = @FREETYPE_LIBS@
 GRAPHICS_LIBS = @GRAPHICS_LIBS@
@@ -320,6 +318,7 @@ libmultiple_a_SOURCES = \
 	libmultiple.h 		\
 	addOrbits.cpp 		\
 	RayleighScattering.h	\
+	RayleighTable.h		\
 	RayleighScattering.cpp	\
 	drawSphere.cpp		\
 	drawEllipsoid.cpp	\

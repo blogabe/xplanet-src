@@ -9,16 +9,16 @@ class Image;
 
 class Icon : public Annotation
 {
- public:
+public:
     Icon(const int x, const int y, const std::string &filename, 
-	 const unsigned char *transparent);
+         const unsigned char *transparent);
 
     virtual ~Icon();
 
     virtual void Shift(const int x) { x_ += x; };
     virtual void Draw(DisplayBase *display);
 
- private:
+private:
 
     int x_;
     const int y_;

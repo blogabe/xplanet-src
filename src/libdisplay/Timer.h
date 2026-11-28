@@ -6,7 +6,7 @@
 
 class Timer
 {
- public:
+public:
     Timer(const int w, const unsigned long h, const unsigned long i);
     virtual ~Timer();
 
@@ -14,7 +14,7 @@ class Timer
 
     virtual bool Sleep();
 
- protected:
+protected:
     const int wait_;
     const unsigned long hibernate_;
     const unsigned long idlewait_;

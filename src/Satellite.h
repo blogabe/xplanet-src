@@ -8,7 +8,7 @@ namespace sgp4sdp4
 
 class Satellite
 {
- public:
+public:
     Satellite(char tle_line[3][80]);
 
     ~Satellite();
@@ -23,7 +23,7 @@ class Satellite
 
     bool operator == (const Satellite &sat) const;
  
- private:
+private:
     bool good;     // if TLE is in the right format
     char tle_entry[3][80];
      

@@ -56,7 +56,7 @@ if test "$with_freetype2" != 'no'; then
    if test "$PKG_CONFIG" = no; then
       AC_MSG_WARN(*** Xplanet will be built without freetype2 support ***)
    else
-      PKG_CHECK_MODULES([FREETYPE2], freetype2 >= 2.0.0, have_freetype2='yes', have_freetype2='no')
+      PKG_CHECK_MODULES([FREETYPE], freetype2 >= 2.0.0, have_freetype2='yes', have_freetype2='no')
       AC_SUBST(FREETYPE_CFLAGS)
       AC_SUBST(FREETYPE_LIBS)
       if test "$have_freetype2" = 'yes'; then
@@ -293,7 +293,7 @@ AC_ARG_WITH(aqua,AC_HELP_STRING([--with-aqua],[For Mac OS X Aqua (NO)]))
 
 if test "$with_aqua" = yes; then
   AC_DEFINE(HAVE_AQUA,,Define for Mac OS X)
-  AQUA_LIBS="-framework IOKit -framework Carbon -framework Cocoa -bind_at_load"
+  AQUA_LIBS="-framework IOKit -framework Carbon -framework Cocoa"
   AC_SUBST(AQUA_LIBS)
 
   OBJC="gcc"

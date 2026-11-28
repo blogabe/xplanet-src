@@ -215,32 +215,9 @@ DisplayBase::drawLabel(PlanetProperties *planetProperties[])
     }
     else
     {
-        char *tzEnv = getenv("TZ");
-        string tzSave("");
-        if (options->DrawUTCLabel())
-        {
-            if (tzEnv != NULL)
-            {
-                tzSave = "TZ=";
-                tzSave += tzEnv;
-            }
-            putenv((char *) "TZ=UTC");
-            tzset();
-        }
-
+        ScopedTimeZone timezone(options->DrawUTCLabel() ? "UTC" : NULL);
         timeString.assign(options->DateFormat());
-
-        // run date string through strftime() and convert to UTF-8
         strftimeUTF8(timeString);
-
-        if (options->DrawUTCLabel())
-        {
-            if (tzEnv == NULL)
-                removeFromEnvironment("TZ"); 
-            else
-                putenv((char *) tzSave.c_str()); 
-            tzset();
-        }       
     }
 
     if (!lookAt.empty()) labelLines.push_back(lookAt);
@@ -248,12 +225,12 @@ DisplayBase::drawLabel(PlanetProperties *planetProperties[])
 
     double oX, oY, oZ;
     double targetDist;
+    options->getOrigin(oX, oY, oZ);
     
     Planet *targetPlanet = NULL;
 
     if (options->TargetMode() != XYZ)
     {
-        options->getOrigin(oX, oY, oZ);
         targetPlanet = new Planet(options->JulianDay(), target);
         targetPlanet->calcHeliocentricEquatorial();
 
@@ -333,6 +310,14 @@ DisplayBase::drawLabel(PlanetProperties *planetProperties[])
         }
     }
 
+    else
+    {
+        double tX, tY, tZ;
+        options->getTarget(tX, tY, tZ);
+        const double dx = tX - oX, dy = tY - oY, dz = tZ - oZ;
+        targetDist = AU_to_km * sqrt(dx*dx + dy*dy + dz*dz);
+    }
+
     if (options->Projection() == MULTIPLE)
     {
         char fovCString[MAX_LINE_LENGTH];
@@ -359,7 +344,8 @@ DisplayBase::drawLabel(PlanetProperties *planetProperties[])
         }
         
         char distString[MAX_LINE_LENGTH];
-        string distLabel = (options->LabelAltitude() ? "altitude" : "distance");
+        string distLabel = options->LabelAltitude() && options->TargetMode() != XYZ
+            ? "altitude" : "distance";
         if (targetDist < 1e6)
         {
             snprintf(distString, MAX_LINE_LENGTH, "%s %.0f km", 

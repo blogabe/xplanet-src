@@ -5,13 +5,13 @@
 
 class DisplayMacAqua : public DisplayBase
 {
- public:
+public:
     DisplayMacAqua(const int tr);
     virtual ~DisplayMacAqua();
 
     void renderImage(PlanetProperties *planetProperties[]);
 
- private:
+private:
 };
 
 #endif

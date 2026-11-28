@@ -13,7 +13,7 @@ public:
 
     void GetHeliocentricXYZ(const body b, const double tjd, 
                             double &Px, double &Py, double &Pz);
- private:
+private:
     void *ephem_;
 };
 

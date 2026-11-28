@@ -1,3 +1,4 @@
+#include <cctype>
 #include <cstdio>
 #include <cstring>
 using namespace std;
@@ -53,8 +54,9 @@ ReadImage(const char *filename, int &width, int &height,
   
     /* see what kind of file we have */
 
-    fread(buf, 1, 4, file);
+    const size_t got = fread(buf, 1, sizeof(buf), file);
     fclose(file);
+    if (got != sizeof(buf)) return false;
 
     if (!strncmp("BM", buf, 2))
     {
@@ -90,12 +92,7 @@ ReadImage(const char *filename, int &width, int &height,
         success = 0;
 #endif /* HAVE_LIBPNG */
     }
-    else if ((   !strncmp("P6\n", buf, 3))
-             || (!strncmp("P5\n", buf, 3))
-             || (!strncmp("P4\n", buf, 3))
-             || (!strncmp("P3\n", buf, 3))
-             || (!strncmp("P2\n", buf, 3))
-             || (!strncmp("P1\n", buf, 3)))
+    else if (buf[0] == 'P' && buf[1] >= '1' && buf[1] <= '6' && isspace(ubuf[2]))
     {
 #ifdef HAVE_LIBPNM
         success = read_pnm(filename, &width, &height, &rgb_data);

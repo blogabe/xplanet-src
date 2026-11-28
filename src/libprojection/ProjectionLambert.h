@@ -5,7 +5,7 @@
 
 class ProjectionLambert : public ProjectionBase
 {
- public:
+public:
     ProjectionLambert(const int f, const int w, const int h);
     bool pixelToSpherical(const double x, const double y, 
                           double &lon, double &lat);

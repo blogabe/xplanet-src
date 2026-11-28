@@ -11,7 +11,7 @@ class PlanetProperties;
 
 class Options
 {
- public:
+public:
     static Options* getInstance();
 
     Options();
@@ -175,7 +175,7 @@ class Options
     void incrementTime(const double sec);
     void setTime(const double jd);
 
- private:
+private:
 
     static Options *instance_;
 
@@ -266,7 +266,7 @@ class Options
     int quality_;        // For JPEG images
 
     double radius_;      // radius of the body, as a fraction of the
-                         // height of the display
+                    // height of the display
     bool random_;
     bool rangeSpecified_; // if the -range option is used
     double range_;        // distance from the body, in units of its radius

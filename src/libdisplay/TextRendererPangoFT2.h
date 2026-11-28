@@ -10,7 +10,7 @@ class DisplayBase;
 
 class TextRendererPangoFT2 : public TextRenderer
 {
- public:
+public:
     TextRendererPangoFT2(DisplayBase *display);
     virtual ~TextRendererPangoFT2();
 
@@ -30,7 +30,7 @@ class TextRendererPangoFT2 : public TextRenderer
 
     virtual void TextBox(int &textWidth, int &textHeight);
 
- private:
+private:
     PangoContext *context_;
     PangoDirection direction_;
     PangoFontDescription *fontDescription_;

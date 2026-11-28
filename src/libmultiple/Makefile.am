@@ -12,6 +12,7 @@ libmultiple_a_SOURCES = 	\
 	libmultiple.h 		\
 	addOrbits.cpp 		\
 	RayleighScattering.h	\
+	RayleighTable.h		\
 	RayleighScattering.cpp	\
 	drawSphere.cpp		\
 	drawEllipsoid.cpp	\

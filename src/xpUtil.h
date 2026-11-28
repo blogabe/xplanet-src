@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <ctime>
+#include <iosfwd>
 #include <string>
 
 #ifndef M_PI
@@ -20,6 +21,12 @@ const double FAR_DISTANCE = 1e6;
 
 const int MAX_LINE_LENGTH = 512;
 
+enum class RecordStatus { End, Valid, Invalid };
+RecordStatus readBoundedRecord(std::istream &input, char *line, size_t size,
+                               const std::string &path, size_t &number);
+bool nextAnnotationRecord(std::istream &input, char *line, size_t size,
+                          const std::string &path, size_t &number);
+
 extern void cross(const double a[3], const double b[3], double c[3]);
 
 extern double dot(const double A0, const double A1, const double A2, 
@@ -34,6 +41,8 @@ extern double ndot(const double a[3], const double b[3]);
 extern double normalize(double a[3]);
 
 extern void invertMatrix(const double in[3][3], double out[3][3]);
+
+extern bool parseRenderDate(const std::string &date, double &julianDay);
 
 extern double toJulian(time_t tv_sec);
 extern time_t get_tv_sec(double jd);
@@ -55,6 +64,20 @@ extern void rotateX(double &X, double &Y, double &Z, const double theta);
 extern void rotateZ(double &X, double &Y, double &Z, const double theta);
 
 extern void removeFromEnvironment(const char *name);
+
+class ScopedTimeZone
+{
+public:
+    explicit ScopedTimeZone(const char *zone);
+    ~ScopedTimeZone();
+
+private:
+    ScopedTimeZone(const ScopedTimeZone &);
+    ScopedTimeZone &operator=(const ScopedTimeZone &);
+    std::string previous_;
+    bool hadPrevious_;
+    bool changed_;
+};
 
 extern void unlinkFile(const char *name);
 

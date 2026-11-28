@@ -18,27 +18,16 @@ fileExists(string &filename)
 
     ostringstream msg;
     msg << "Looking for " << filename << " ... ";
-    ifstream f(filename.c_str());
-    if (f.is_open())
-    {
-        struct stat status;
-        stat(filename.c_str(), &status );
-        if (status.st_mode & S_IFREG)
-        {
-            msg << "found\n";
-            f.close();
-            returnVal = true;
-        }
-        else
-        {
-            msg << "is not a regular file!\n";
-            returnVal = false;
-        }
-    }
+    struct stat status;
+    if (stat(filename.c_str(), &status) != 0)
+        msg << "not found\n";
+    else if (!S_ISREG(status.st_mode))
+        msg << "is not a regular file!\n";
     else
     {
-        msg << "not found\n";
-        returnVal = false;
+        ifstream file(filename.c_str());
+        returnVal = file.is_open();
+        msg << (returnVal ? "found\n" : "not readable\n");
     }
 
     Options *options = Options::getInstance();

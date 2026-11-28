@@ -9,14 +9,14 @@
 
 class TimerMacAqua : public Timer
 {
- public:
+public:
     TimerMacAqua(const int w, const unsigned long h, const unsigned long i);
     ~TimerMacAqua();
 
     bool Sleep();
 
- private:
-    unsigned long GetSystemIdleTime();
+private:
+    bool GetSystemIdleTime(unsigned long &idle);
 };
 
 #endif

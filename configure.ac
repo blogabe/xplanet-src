@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-AC_INIT([xplanet],[1.3.2])
+AC_INIT([xplanet],[1.4.0])
 AC_CONFIG_SRCDIR(src/xplanet.cpp)
 AM_INIT_AUTOMAKE
 
@@ -66,6 +66,16 @@ AC_USE_MACAQUA
 AC_FIND_GRAPHICS_LIBS
 
 AC_FIND_CSPICE
+
+if test "$with_pnm" = yes && test "$have_pnm" != yes; then
+  AC_MSG_ERROR([--with-pnm requested but Netpbm headers and library were not found])
+fi
+if test "$with_pango" = yes && test "$have_pangoft2" != yes; then
+  AC_MSG_ERROR([--with-pango requested but PangoFT2 was not found through pkg-config])
+fi
+if test "$with_cspice" = yes && test "$have_cspice" != yes; then
+  AC_MSG_ERROR([--with-cspice requested but CSPICE headers and library were not found])
+fi
 
 if test "$have_aqua" = no; then
 AM_ICONV

@@ -14,6 +14,8 @@ AM_LDFLAGS = @xplanet_LDFLAGS@
 xplanet_SOURCES = \
 	Map.cpp			\
 	Map.h			\
+	MapReduction.h		\
+	OrbitMath.h		\
 	Options.cpp		\
 	Options.h		\
 	PlanetProperties.h	\
@@ -41,6 +43,7 @@ xplanet_SOURCES = \
 	getopt.h		\
 	getopt1.c		\
 	keywords.h		\
+	ParseToken.h		\
 	parse.h			\
 	parse.cpp  		\
 	parseColor.h		\

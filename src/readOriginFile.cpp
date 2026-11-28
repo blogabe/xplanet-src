@@ -1,4 +1,6 @@
-#include <clocale>
+#include <cmath>
+#include <limits>
+#include <locale>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
@@ -31,91 +33,93 @@ interpolateCircular(double x0, double x1,
     return(returnVal);
 }
 
-void
-readOriginFile(string filename, vector<LBRPoint> &originVector)
+static bool
+parseOriginRecord(const string &line, LBRPoint &point, bool requirePosition)
+{
+    istringstream fields(line.substr(0, line.find('#')));
+    fields.imbue(locale::classic());
+    string date;
+    if (!(fields >> date) || !parseRenderDate(date, point.time)) return false;
+    point.radius = point.latitude = point.longitude = 0;
+    point.localTime = -1;
+    fields >> ws;
+    if (fields.eof()) return !requirePosition;
+
+    double radius, latitude, longitude;
+    if (!(fields >> radius >> latitude >> longitude) || !isfinite(radius)
+        || !isfinite(latitude) || !isfinite(longitude)
+        || radius <= 0 || latitude < -90 || latitude > 90)
+        return false;
+    fields >> ws;
+    if (!fields.eof())
+    {
+        if (!(fields >> point.localTime) || !isfinite(point.localTime)
+            || point.localTime < 0 || point.localTime > 24)
+            return false;
+        fields >> ws;
+        if (!fields.eof()) return false;
+    }
+    point.radius = radius;
+    point.latitude = latitude * deg_to_rad;
+    point.longitude = longitude * deg_to_rad;
+    return true;
+}
+
+static void
+readOriginRecords(string filename, vector<LBRPoint> &points,
+                  bool increasingTime, bool requirePosition)
 {
     if (!findFile(filename, "origin"))
+        xpExit("Can't open origin file " + filename + "\n", __FILE__, __LINE__);
+    ifstream file(filename.c_str());
+
+    char line[4096];
+    size_t lineNumber = 0;
+    for (;;)
     {
-        ostringstream errStr;
-        errStr << "Can't open origin file " << filename << "\n";
-        xpExit(errStr.str(), __FILE__, __LINE__);
+        ++lineNumber;
+        if (!file.getline(line, sizeof(line)))
+        {
+            if (file.eof() || file.bad() || file.gcount() == 0) break;
+            file.clear();
+            file.ignore(numeric_limits<streamsize>::max(), '\n');
+            ostringstream message;
+            message << filename << ':' << lineNumber << ": origin line is too long\n";
+            xpWarn(message.str(), __FILE__, __LINE__);
+            continue;
+        }
+
+        const string content(line);
+        const size_t start = content.find_first_not_of(" \t\r");
+        if (start == string::npos || content[start] == '#') continue;
+        LBRPoint point;
+        if (!parseOriginRecord(content, point, requirePosition)
+            || (increasingTime && !points.empty() && point.time <= points.back().time))
+        {
+            ostringstream message;
+            message << filename << ':' << lineNumber << ": ignoring invalid origin record\n";
+            xpWarn(message.str(), __FILE__, __LINE__);
+            continue;
+        }
+        points.push_back(point);
     }
 
-    checkLocale(LC_NUMERIC, "C");
+    if (points.empty())
+        xpExit("No usable records in origin file " + filename + "\n", __FILE__, __LINE__);
+}
 
-    ifstream infile(filename.c_str());
-    char line[256];
-    while(infile.getline(line, 256))
-    {
-        if (line[0] == '#') continue;
-
-        long int yyyymmdd, hhmmss;
-        double r, lat, lon, localTime;
-
-        int numRead = sscanf(line, "%ld.%ld %lf %lf %lf %lf", 
-                             &yyyymmdd, &hhmmss,
-                             &r, &lat, &lon, &localTime);
-        int yyyymm = yyyymmdd / 100;
-        int year = yyyymm/100;
-        int month = abs(yyyymm - year * 100);
-        int day = abs((int) yyyymmdd - yyyymm * 100);
-        
-        int hhmm = hhmmss / 100;
-        int hour = hhmm / 100;
-        int min = hhmm - hour * 100;
-        int sec = hhmmss - hhmm * 100;
-        
-        const double julian_day = toJulian(year, month, day, hour, min, sec);
-
-        // If only the date has been specified, set range to 0
-        if (numRead < 3) r = 0;
-
-        // If localTime isn't specified, set it to -1
-        if (numRead < 6) localTime = -1;
-
-        lat *= deg_to_rad;
-        lon *= deg_to_rad;
-
-        LBRPoint p = { julian_day, r, lat, lon, localTime };
-
-        originVector.push_back(p);
-    }
-    checkLocale(LC_NUMERIC, "");
-    infile.close();
+void
+readOriginFile(string filename, vector<LBRPoint> &originVector, bool interpolate)
+{
+    readOriginRecords(filename, originVector, interpolate, interpolate);
 }
 
 void
 readDynamicOrigin(string filename, LBRPoint &originPoint)
 {
-    if (!findFile(filename, "origin"))
-    {
-        ostringstream errStr;
-        errStr << "Can't open origin file " << filename << "\n";
-        xpExit(errStr.str(), __FILE__, __LINE__);
-    }
-
-    checkLocale(LC_NUMERIC, "C");
-    ifstream infile(filename.c_str());
-    char line[256];
-    while(infile.getline(line, 256))
-    {
-        if (line[0] == '#') continue;
-
-        long int yyyymmdd, hhmmss;  // not used
-        double r, lat, lon, localTime = -1;
-        sscanf(line, "%ld.%ld %lf %lf %lf %lf", &yyyymmdd, &hhmmss,
-               &r, &lat, &lon, &localTime);
-        lat *= deg_to_rad;
-        lon *= deg_to_rad;
-
-        originPoint.time = 0;
-        originPoint.radius = r;
-        originPoint.latitude = lat;
-        originPoint.longitude = lon;
-        originPoint.localTime = localTime;
-    }
-    checkLocale(LC_NUMERIC, "");
-    infile.close();
+    vector<LBRPoint> points;
+    readOriginRecords(filename, points, false, true);
+    originPoint = points.back();
 }
 
 void
@@ -127,14 +131,14 @@ interpolateOriginFile(const double julianDay,
 {
     const int numPoints = originVector.size();
 
-    if (julianDay < originVector[0].time)
+    if (julianDay <= originVector[0].time)
     {
         rad = originVector[0].radius;
         lat = originVector[0].latitude;
         lon = originVector[0].longitude;
         localTime = originVector[0].localTime;
     }
-    else if (julianDay > originVector[numPoints-1].time)
+    else if (julianDay >= originVector[numPoints-1].time)
     {
         rad = originVector[numPoints-1].radius;
         lat = originVector[numPoints-1].latitude;
@@ -164,10 +168,10 @@ interpolateOriginFile(const double julianDay,
                                           originVector[i].longitude,
                                           TWO_PI,
                                           interpFactor);
-                localTime = interpolateCircular(originVector[i-1].localTime,
-                                                originVector[i].localTime,
-                                                24,
-                                                interpFactor);
+                const double local0 = originVector[i-1].localTime;
+                const double local1 = originVector[i].localTime;
+                localTime = (local0 < 0 || local1 < 0) ? -1
+                    : interpolateCircular(local0, local1, 24, interpFactor);
 
                 break;
             }

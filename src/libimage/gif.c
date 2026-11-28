@@ -29,172 +29,128 @@
   Based on the gif2rgb and rgb2gif codes in the libgif distribution. 
 */
 
+#include "ImageReadLimits.h"
+
+static int
+read_gif_row(GifFileType *gif, const ColorMapObject *map,
+             GifPixelType *row, unsigned char *output, int width)
+{
+    if (DGifGetLine(gif, row, width) == GIF_ERROR) return 0;
+    for (int x = 0; x < width; ++x)
+    {
+        if (row[x] >= map->ColorCount) return 0;
+        const GifColorType *color = map->Colors + row[x];
+        output[3*x] = color->Red;
+        output[3*x + 1] = color->Green;
+        output[3*x + 2] = color->Blue;
+    }
+    return 1;
+}
+
 int
 read_gif(const char *filename, int *width, int *height, unsigned char **rgb)
 {
-    int	BackGround = 0;
-    /* The way Interlaced image should be read - offsets and
-       jumps... */
-    int InterlacedOffset[] = { 0, 4, 2, 1 }; 
-    int InterlacedJumps[] = { 8, 8, 4, 2 };
-    ColorMapObject *ColorMap;
-
-    int	i, j, Size, Row, Col, Width, Height, ExtCode, Count;
-    GifRecordType RecordType;
-    GifByteType *Extension;
-    GifRowType *ScreenBuffer;
-
-    GifRowType GifRow;
-    GifColorType *ColorMapEntry;
-    unsigned char *BufferP;
-
-    GifFileType *GifFile;
 #if GIFLIB_MAJOR >= 5
-    GifFile = DGifOpenFileName(filename, NULL);
+    GifFileType *gif = DGifOpenFileName(filename, NULL);
 #else
-    GifFile = DGifOpenFileName(filename);
+    GifFileType *gif = DGifOpenFileName(filename);
 #endif
-    if (GifFile == NULL) {
-	fprintf(stderr, "Can't open GIF file %s\n", filename);
-	return(0);
-    }
-    /* (Following comment was probably written on a 286 running under DOS.)  */
-    /* Allocate the screen as vector of column of rows. We can't allocate the*/
-    /* whole screen at once, as this broken minded CPU can allocate up to    */
-    /* 64k at a time and our image can be bigger than that:		     */
-    /* Note this screen is device independent - it's the screen defined by   */
-    /* the GIF file parameters.						     */
-    if ((ScreenBuffer = (GifRowType *)
-	 malloc(GifFile->SHeight * sizeof(GifRowType))) == NULL)
+    if (gif == NULL) return 0;
+
+    const int w = gif->SWidth, h = gif->SHeight;
+    size_t area;
+    unsigned char *pixels = NULL;
+    GifPixelType *row = NULL;
+    int found_image = 0, ok = 0;
+    if (!image_read_area(w, h, 3, "GIF", &area)) goto cleanup;
+    const ColorMapObject *global = gif->SColorMap;
+
+    GifRecordType record;
+    do
     {
-	fprintf(stderr, "Failed to allocate memory required, aborted.");
-	return(0);
-    }
+        if (DGifGetRecordType(gif, &record) == GIF_ERROR) goto cleanup;
+        if (record == IMAGE_DESC_RECORD_TYPE)
+        {
+            if (DGifGetImageDesc(gif) == GIF_ERROR) goto cleanup;
+            const GifImageDesc *frame = &gif->Image;
+            if (frame->Left < 0 || frame->Top < 0 ||
+                frame->Width <= 0 || frame->Height <= 0 ||
+                frame->Width > w - frame->Left || frame->Height > h - frame->Top)
+                goto cleanup;
 
-    Size = GifFile->SWidth * sizeof(GifPixelType);/* Size in bytes one row.*/
-    if ((ScreenBuffer[0] = (GifRowType) malloc(Size)) == NULL) /* First row. */
-    {
-	fprintf(stderr, "Failed to allocate memory required, aborted.");
-	return(0);
-    }
+            const ColorMapObject *map = frame->ColorMap != NULL ? frame->ColorMap : global;
+            if (map == NULL || map->Colors == NULL || map->ColorCount <= 0)
+                goto cleanup;
 
-    for (i = 0; i < GifFile->SWidth; i++)  /* Set its color to BackGround. */
-	ScreenBuffer[0][i] = GifFile->SBackGroundColor;
-    for (i = 1; i < GifFile->SHeight; i++) {
-	/* Allocate the other rows, and set their color to background too: */
-	if ((ScreenBuffer[i] = (GifRowType) malloc(Size)) == NULL)
-	{
-	    fprintf(stderr, "Failed to allocate memory required, aborted.\n");
-	    return(0);
-	}
+            /* Do not allocate a canvas based only on the logical screen
+             * header. First require an image descriptor that fits and has
+             * a usable palette. */
+            if (!found_image)
+            {
+                pixels = calloc(area, 3);
+                row = malloc((size_t) w * sizeof(*row));
+                if (pixels == NULL || row == NULL) goto cleanup;
 
-	memcpy(ScreenBuffer[i], ScreenBuffer[0], Size);
-    }
+                const int bg_index = gif->SBackGroundColor;
+                if (global != NULL && global->Colors != NULL
+                    && bg_index >= 0 && bg_index < global->ColorCount
+                    && (frame->Width != w || frame->Height != h))
+                {
+                    const GifColorType bg = global->Colors[bg_index];
+                    for (size_t i = 0; i < area; ++i)
+                    {
+                        pixels[3*i] = bg.Red;
+                        pixels[3*i + 1] = bg.Green;
+                        pixels[3*i + 2] = bg.Blue;
+                    }
+                }
+            }
 
-    /* Scan the content of the GIF file and load the image(s) in: */
-    do {
-	if (DGifGetRecordType(GifFile, &RecordType) == GIF_ERROR) {
-	    fprintf(stderr, "Can't read GIF file\n");
-	    return(0);
-	}
-	switch (RecordType) {
-	case IMAGE_DESC_RECORD_TYPE:
-	    if (DGifGetImageDesc(GifFile) == GIF_ERROR) {
-		return(0);
-	    }
-	    Row = GifFile->Image.Top; /* Image Position relative to Screen. */
-	    Col = GifFile->Image.Left;
-	    Width = GifFile->Image.Width;
-	    Height = GifFile->Image.Height;
-	    if (GifFile->Image.Left + GifFile->Image.Width > GifFile->SWidth ||
-		GifFile->Image.Top + GifFile->Image.Height > GifFile->SHeight) {
-		return(0);
-	    }
-	    if (GifFile->Image.Interlace) {
-		/* Need to perform 4 passes on the images: */
-		for (Count = i = 0; i < 4; i++)
-		    for (j = Row + InterlacedOffset[i]; j < Row + Height;
-			 j += InterlacedJumps[i]) {
-			if (DGifGetLine(GifFile, &ScreenBuffer[j][Col],
-					Width) == GIF_ERROR) {
-			    return(0);
-			}
-		    }
-	    }
-	    else {
-		for (i = 0; i < Height; i++) {
-		    if (DGifGetLine(GifFile, &ScreenBuffer[Row++][Col],
-				    Width) == GIF_ERROR) {
-			return(0);
-		    }
-		}
-	    }
-	    break;
-	case EXTENSION_RECORD_TYPE:
-	    /* Skip any extension blocks in file: */
-	    if (DGifGetExtension(GifFile, &ExtCode, &Extension) == GIF_ERROR) {
-		return(0);
-	    }
-	    while (Extension != NULL) {
-		if (DGifGetExtensionNext(GifFile, &Extension) == GIF_ERROR) {
-		    return(0);
-		}
-	    }
-	    break;
-	case TERMINATE_RECORD_TYPE:
-	    break;
-	default:		    /* Should be traps by DGifGetRecordType. */
-	    break;
-	}
-    } while (RecordType != TERMINATE_RECORD_TYPE);
+            const int offsets[] = { 0, 4, 2, 1 };
+            const int jumps[] = { 8, 8, 4, 2 };
+            const int passes = frame->Interlace ? 4 : 1;
+            for (int pass = 0; pass < passes; ++pass)
+            {
+                const int step = frame->Interlace ? jumps[pass] : 1;
+                for (int y = offsets[pass]; y < frame->Height; y += step)
+                {
+                    unsigned char *out = pixels + 3 * ((frame->Top + y) * w + frame->Left);
+                    if (!read_gif_row(gif, map, row, out, frame->Width))
+                        goto cleanup;
+                }
+            }
+            found_image = 1;
+        }
+        else if (record == EXTENSION_RECORD_TYPE)
+        {
+            int code;
+            GifByteType *extension;
+            if (DGifGetExtension(gif, &code, &extension) == GIF_ERROR)
+                goto cleanup;
+            while (extension != NULL)
+                if (DGifGetExtensionNext(gif, &extension) == GIF_ERROR) goto cleanup;
+        }
+    } while (record != TERMINATE_RECORD_TYPE);
+    ok = found_image;
 
-    /* Lets dump it - set the global variables required and do it: */
-    BackGround = GifFile->SBackGroundColor;
-    ColorMap = (GifFile->Image.ColorMap
-		? GifFile->Image.ColorMap
-		: GifFile->SColorMap);
-    if (ColorMap == NULL) {
-	fprintf(stderr, "Gif Image does not have a colormap\n");
-	return(0);
-    }
-
-    *width = GifFile->SWidth;
-    *height = GifFile->SHeight;
-
-    rgb[0] = malloc(3 * *width * *height);
-    if (rgb[0] == NULL)
-    {
-	fprintf(stderr, "Can't allocate memory for GIF file.\n");
-	return(0);
-    }
-
-    BufferP = rgb[0];
-    
-    for (i = 0; i < *height; i++) {
-	GifRow = ScreenBuffer[i];
-	for (j = 0; j < *width; j++) {
-	    ColorMapEntry = &ColorMap->Colors[GifRow[j]];
-	    *BufferP++ = ColorMapEntry->Red;
-	    *BufferP++ = ColorMapEntry->Green;
-	    *BufferP++ = ColorMapEntry->Blue;
-	}
-    }
-    
+cleanup:
 #if GIFLIB_MAJOR >= 5
-    if (DGifCloseFile(GifFile, NULL) == GIF_ERROR) {
+    if (DGifCloseFile(gif, NULL) == GIF_ERROR) ok = 0;
 #else
-    if (DGifCloseFile(GifFile) == GIF_ERROR) {
+    if (DGifCloseFile(gif) == GIF_ERROR) ok = 0;
 #endif
-	return(0);
+    free(row);
+    if (ok)
+    {
+        *width = w;
+        *height = h;
+        *rgb = pixels;
     }
-
-    return(1);
+    else free(pixels);
+    return ok;
 }
 
-/* Make some variables global, so we could access them faster: */
-static int
-    ExpNumOfColors = 8,
-    ColorMapSize = 256;
+enum { ExpNumOfColors = 8 };
 
 /******************************************************************************
  * Code to quantize high resolution image into lower one. You may want to
@@ -315,7 +271,7 @@ QuantizeBuffer(unsigned int Width,
     NewColorSubdiv[0].Count = ((long)Width) * Height; /* Pixels */
     NewColorMapSize = 1;
     if (SubdivColorMap(NewColorSubdiv, *ColorMapSize, &NewColorMapSize) !=
-       GIF_OK) {
+        GIF_OK) {
         free((char *)ColorArrayEntries);
         return GIF_ERROR;
     }
@@ -395,7 +351,7 @@ SubdivColorMap(NewColorMapType * NewColorSubdiv,
         for (i = 0; i < *NewColorMapSize; i++) {
             for (j = 0; j < 3; j++) {
                 if ((((int)NewColorSubdiv[i].RGBWidth[j]) > MaxSize) &&
-                      (NewColorSubdiv[i].NumEntries > 1)) {
+                    (NewColorSubdiv[i].NumEntries > 1)) {
                     MaxSize = NewColorSubdiv[i].RGBWidth[j];
                     Index = i;
                     SortRGBAxis = j;
@@ -435,7 +391,7 @@ SubdivColorMap(NewColorMapType * NewColorSubdiv,
         NumEntries = 1;
         Count = QuantizedColor->Count;
         while (QuantizedColor->Pnext != NULL &&
-	       (Sum -= QuantizedColor->Pnext->Count) >= 0 &&
+               (Sum -= QuantizedColor->Pnext->Count) >= 0 &&
                QuantizedColor->Pnext->Pnext != NULL) {
             QuantizedColor = QuantizedColor->Pnext;
             NumEntries++;
@@ -447,33 +403,33 @@ SubdivColorMap(NewColorMapType * NewColorSubdiv,
          * they need to be rescaled.
          */
         MaxColor = QuantizedColor->RGB[SortRGBAxis]; /* Max. of first half */
-	/* coverity[var_deref_op] */
+        /* coverity[var_deref_op] */
         MinColor = QuantizedColor->Pnext->RGB[SortRGBAxis]; /* of second */
         MaxColor <<= (8 - BITS_PER_PRIM_COLOR);
         MinColor <<= (8 - BITS_PER_PRIM_COLOR);
 
         /* Partition right here: */
         NewColorSubdiv[*NewColorMapSize].QuantizedColors =
-           QuantizedColor->Pnext;
+            QuantizedColor->Pnext;
         QuantizedColor->Pnext = NULL;
         NewColorSubdiv[*NewColorMapSize].Count = Count;
         NewColorSubdiv[Index].Count -= Count;
         NewColorSubdiv[*NewColorMapSize].NumEntries =
-           NewColorSubdiv[Index].NumEntries - NumEntries;
+            NewColorSubdiv[Index].NumEntries - NumEntries;
         NewColorSubdiv[Index].NumEntries = NumEntries;
         for (j = 0; j < 3; j++) {
             NewColorSubdiv[*NewColorMapSize].RGBMin[j] =
-               NewColorSubdiv[Index].RGBMin[j];
+                NewColorSubdiv[Index].RGBMin[j];
             NewColorSubdiv[*NewColorMapSize].RGBWidth[j] =
-               NewColorSubdiv[Index].RGBWidth[j];
+                NewColorSubdiv[Index].RGBWidth[j];
         }
         NewColorSubdiv[*NewColorMapSize].RGBWidth[SortRGBAxis] =
-           NewColorSubdiv[*NewColorMapSize].RGBMin[SortRGBAxis] +
-           NewColorSubdiv[*NewColorMapSize].RGBWidth[SortRGBAxis] - MinColor;
+            NewColorSubdiv[*NewColorMapSize].RGBMin[SortRGBAxis] +
+            NewColorSubdiv[*NewColorMapSize].RGBWidth[SortRGBAxis] - MinColor;
         NewColorSubdiv[*NewColorMapSize].RGBMin[SortRGBAxis] = MinColor;
 
         NewColorSubdiv[Index].RGBWidth[SortRGBAxis] =
-           MaxColor - NewColorSubdiv[Index].RGBMin[SortRGBAxis];
+            MaxColor - NewColorSubdiv[Index].RGBMin[SortRGBAxis];
 
         (*NewColorMapSize)++;
     }
@@ -505,109 +461,66 @@ static void QuitGifError(GifFileType *GifFile)
 #endif
 }
 
-int 
-write_gif(const char *filename, int width, int height, char *rgb)
+static int
+write_gif_bytes(GifFileType *gif, const GifByteType *bytes, int count)
 {
-    int i;
-    GifByteType *red, *green, *blue;
+    return (int) fwrite(bytes, 1, count, gif->UserData);
+}
 
-    GifByteType *OutputBuffer = NULL;
-    ColorMapObject *OutputColorMap = NULL;
+int
+write_gif(FILE *file, int width, int height, unsigned char *rgb)
+{
+    if (width > 65535 || height > 65535) return 0;
 
-    GifFileType *GifFile;
-    GifByteType *Ptr;
+    const int area = width * height;
+    int colors = 1 << ExpNumOfColors;
+#if GIFLIB_MAJOR >= 5
+    ColorMapObject *map = GifMakeMapObject(colors, NULL);
+#else
+    ColorMapObject *map = MakeMapObject(colors, NULL);
+#endif
+    GifByteType *indices = malloc(area);
+    GifByteType *planes = malloc(3 * area);
+    int ok = 0;
+    if (map == NULL || indices == NULL || planes == NULL) goto cleanup;
 
-    bool GifTestExistance = false;
-
-    ColorMapSize = 1 << ExpNumOfColors;
+    for (int i = 0; i < area; ++i)
+    {
+        planes[i] = rgb[3*i];
+        planes[area + i] = rgb[3*i + 1];
+        planes[2*area + i] = rgb[3*i + 2];
+    }
+    if (QuantizeBuffer(width, height, &colors, planes, planes + area,
+                       planes + 2*area, indices, map->Colors) == GIF_ERROR)
+        goto cleanup;
 
 #if GIFLIB_MAJOR >= 5
-    OutputColorMap = GifMakeMapObject(ColorMapSize, NULL);
+    GifFileType *gif = EGifOpen(file, write_gif_bytes, NULL);
 #else
-    OutputColorMap = MakeMapObject(ColorMapSize, NULL);
+    GifFileType *gif = EGifOpen(file, write_gif_bytes);
 #endif
-    
-    if (OutputColorMap == NULL ||
-	(OutputBuffer = (GifByteType *) malloc(width * height *
-					       sizeof(GifByteType))) == NULL)
-    {
-	fprintf(stderr,"Failed to allocate memory required, aborted.");
-	return(0);
-    }
+    if (gif == NULL) goto cleanup;
 
-    red = malloc(width * height * sizeof(GifByteType));
-    green = malloc(width * height * sizeof(GifByteType));
-    blue = malloc(width * height * sizeof(GifByteType));
-    if (red == NULL || green == NULL || blue == NULL)
-    {
-	fprintf(stderr, "Can't allocate memory for GIF file.\n");
-	return(0);
-    }
-    for (i = 0; i < width * height; i++)
-    {
-	red[i]   = (GifByteType) rgb[3*i  ];
-	green[i] = (GifByteType) rgb[3*i+1];
-	blue[i]  = (GifByteType) rgb[3*i+2];
-    }
-
-    if (QuantizeBuffer(width, height, &ColorMapSize,
-		       red, green, blue,
-		       OutputBuffer, OutputColorMap->Colors) == GIF_ERROR)
-
-    {
-	QuitGifError(NULL);
-	return(0);
-    }
-
-    free(red);
-    free(green);
-    free(blue);
-
-    Ptr = OutputBuffer;
+    ok = EGifPutScreenDesc(gif, width, height, ExpNumOfColors, 0, map) != GIF_ERROR
+        && EGifPutImageDesc(gif, 0, 0, width, height, false, NULL) != GIF_ERROR;
+    for (int i = 0; ok && i < height; ++i)
+        ok = EGifPutLine(gif, indices + i * width, width) != GIF_ERROR;
 
 #if GIFLIB_MAJOR >= 5
-    GifFile = EGifOpenFileName(filename, GifTestExistance, NULL);
+    if (EGifCloseFile(gif, NULL) == GIF_ERROR) ok = 0;
 #else
-    GifFile = EGifOpenFileName(filename, GifTestExistance);
+    if (EGifCloseFile(gif) == GIF_ERROR) ok = 0;
 #endif
-    /* Open stdout for the output file: */
-    if (GifFile == NULL)
+cleanup:
+    free(indices);
+    free(planes);
+    if (map != NULL)
     {
-	QuitGifError(GifFile);
-	return(0);
-    }
-
-    if (EGifPutScreenDesc(GifFile,
-			  width, height, ExpNumOfColors, 0,
-			  OutputColorMap) == GIF_ERROR ||
-	EGifPutImageDesc(GifFile,
-			 0, 0, width, height, false, NULL) == GIF_ERROR)
-
-    {
-	QuitGifError(GifFile);
-	return(0);
-    }
-
-    for (i = 0; i < height; i++) {
-	if (EGifPutLine(GifFile, Ptr, width) == GIF_ERROR)
-
-	{
-	    QuitGifError(GifFile);
-	    return(0);
-	}
-	Ptr += width;
-    }
-
 #if GIFLIB_MAJOR >= 5
-    if (EGifCloseFile(GifFile, NULL) == GIF_ERROR)
+        GifFreeMapObject(map);
 #else
-    if (EGifCloseFile(GifFile) == GIF_ERROR)
+        FreeMapObject(map);
 #endif
-
-    {
-	QuitGifError(GifFile);
-	return(0);
     }
-
-    return(1);
+    return ok;
 }

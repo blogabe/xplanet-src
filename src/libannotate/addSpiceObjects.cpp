@@ -1,4 +1,5 @@
 #include <clocale>
+#include <cmath>
 #include <cstring>
 #include <fstream>
 #include <map>
@@ -9,6 +10,7 @@ using namespace std;
 #include "findFile.h"
 #include "keywords.h"
 #include "Options.h"
+#include "OrbitMath.h"
 #include "parse.h"
 #include "sphericalToPixel.h"
 #include "View.h"
@@ -242,19 +244,13 @@ readSpiceFile(const char *line,
             break;
         case TRAIL:
         {
-            checkLocale(LC_NUMERIC, "C");
-            if (!sscanf(returnString, "%lf,%lf,%lf", &trailStart, &trailEnd,
-                        &trailInterval) == 3)
+            if (!parseTrailWindow(returnString, 36525.0, 1e-4,
+                                  trailStart, trailEnd, trailInterval))
             {
-                xpWarn("Need three values for trail{}!\n", 
-                       __FILE__, __LINE__);
+                xpWarn("trail{} requires an ordered start and end and a positive interval, "
+                       "within supported trail limits.\n", __FILE__, __LINE__);
                 syntaxError = true;
             }
-            else
-            {
-                if (trailInterval < 1e-4) trailInterval = 1e-4;
-            }
-            checkLocale(LC_NUMERIC, "");
         }
         break;
         case TRANSPARENT:
@@ -373,12 +369,12 @@ readSpiceFile(const char *line,
         for (map<double, Planet *>::iterator it0 = planetsFromSunMap.begin();
              it0 != planetsFromSunMap.end(); it0++)
         {
-          Planet *planet = it0->second;
-          double rX, rY, rZ;
-          planet->getPosition(rX, rY, rZ);
-          view->XYZToPixel(rX, rY, rZ, rX, rY, rZ);
-          rX += options->CenterX();
-          rY += options->CenterY();
+            Planet *planet = it0->second;
+            double rX, rY, rZ;
+            planet->getPosition(rX, rY, rZ);
+            view->XYZToPixel(rX, rY, rZ, rX, rY, rZ);
+            rX += options->CenterX();
+            rY += options->CenterY();
           
             double pixelDist = sqrt((rX - pX)*(rX - pX) 
                                     + (rY - pY)*(rY - pY));
@@ -528,15 +524,11 @@ processSpiceKernels(const bool load)
         {
             ifstream inFile(kernelFile.c_str());
             char *line = new char[MAX_LINE_LENGTH];
-            while (inFile.getline(line, MAX_LINE_LENGTH, '\n'))
+            size_t number = 0;
+            while (nextAnnotationRecord(inFile, line, MAX_LINE_LENGTH, kernelFile, number))
             {
                 int ii = 0;
-                while (isDelimiter(line[ii]))
-                {
-                    ii++;
-                    if (static_cast<unsigned int> (ii) > strlen(line))
-                        continue;
-                }
+                while (!isEndOfLine(line[ii]) && isDelimiter(line[ii])) ++ii;
                 if (isEndOfLine(line[ii])) continue;
                 
                 char *ptr = &line[ii];
@@ -580,7 +572,8 @@ addSpiceObjects(map<double, Planet *> &planetsFromSunMap,
         {
             ifstream inFile(spiceFile.c_str());
             char *line = new char[MAX_LINE_LENGTH];
-            while (inFile.getline(line, MAX_LINE_LENGTH, '\n'))
+            size_t number = 0;
+            while (nextAnnotationRecord(inFile, line, MAX_LINE_LENGTH, spiceFile, number))
                 readSpiceFile(line, planetsFromSunMap, view, projection,
                               annotationMap);
             inFile.close();

@@ -3,10 +3,10 @@
 
 class Image
 {
- public:
+public:
     Image();
     Image(const int w, const int h, const unsigned char *rgb, 
-	  const unsigned char *alpha);
+          const unsigned char *alpha);
 
     ~Image();
 
@@ -15,7 +15,7 @@ class Image
 
     void getPixel(double px, double py, unsigned char *pixel);
     void getPixel(double px, double py, unsigned char *pixel, 
-		  unsigned char *alpha);
+                  unsigned char *alpha);
 
     int Width() const  { return(width_); };
     int Height() const { return(height_); };
@@ -29,7 +29,7 @@ class Image
     void Resize(const int w, const int h);
     void Shift(const int x);
 
- private:
+private:
     int width_, height_, area_;
     unsigned char *rgbData_;
     unsigned char *pngAlpha_;

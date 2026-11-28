@@ -40,8 +40,8 @@ buildPlanetMap(const double jd, map<double, Planet *> &planetMap)
 
 void
 buildPlanetMap(const double jd, 
-               const double oX, const double oY, const double oZ, 
-               const bool light_time, map<double, Planet *> &planetMap)
+                    const double oX, const double oY, const double oZ,
+                    const bool light_time, map<double, Planet *> &planetMap)
 {
     planetMap.clear();
     if (!firstTime) destroyPlanetMap();

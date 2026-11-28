@@ -36,4 +36,4 @@ else
   libtimer_a_AR = $(CXX) @xplanet_ARFLAGS@
 endif
 
-libimage_a_SOURCES = Image.cpp Image.h $(read) $(write) $(bmp) $(gif) $(jpeg) $(png) $(pnm) $(tiff)
+libimage_a_SOURCES = Image.cpp Image.h ImageReadLimits.h $(read) $(write) $(bmp) $(gif) $(jpeg) $(png) $(pnm) $(tiff)

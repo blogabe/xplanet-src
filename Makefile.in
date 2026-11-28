@@ -264,8 +264,6 @@ ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
-FREETYPE2_CFLAGS = @FREETYPE2_CFLAGS@
-FREETYPE2_LIBS = @FREETYPE2_LIBS@
 FREETYPE_CFLAGS = @FREETYPE_CFLAGS@
 FREETYPE_LIBS = @FREETYPE_LIBS@
 GRAPHICS_LIBS = @GRAPHICS_LIBS@
@@ -415,7 +413,7 @@ nobase_dist_data_DATA = \
 	xplanet/spice/voyager.krn	\
 	xplanet/stars/BSC
 
-EXTRA_DIST = xplanet.1 $(sources)
+EXTRA_DIST = xplanet.1 $(sources) README.md prepare-build.sh tests/README.md tests/tle_catalog.c tests/map_reduction.cpp tests/image_read.cpp tests/rayleigh_table.cpp tests/orbit_math.cpp tests/parse_token.cpp tests/check-renderer.sh
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -841,6 +839,7 @@ distcleancheck: distclean
 	       $(distcleancheck_listfiles) ; \
 	       exit 1; } >&2
 check-am: all-am
+	$(MAKE) $(AM_MAKEFLAGS) check-local
 check: check-recursive
 all-am: Makefile $(MANS) $(DATA) config.h
 installdirs: installdirs-recursive
@@ -949,27 +948,55 @@ uninstall-am: uninstall-man uninstall-nobase_dist_dataDATA
 
 uninstall-man: uninstall-man1
 
-.MAKE: $(am__recursive_targets) all install-am install-strip
+.MAKE: $(am__recursive_targets) all check-am install-am install-strip
 
 .PHONY: $(am__recursive_targets) CTAGS GTAGS TAGS all all-am \
-	am--refresh check check-am clean clean-cscope clean-generic \
-	cscope cscopelist-am ctags ctags-am dist dist-all dist-bzip2 \
-	dist-gzip dist-lzip dist-shar dist-tarZ dist-xz dist-zip \
-	dist-zstd distcheck distclean distclean-generic distclean-hdr \
-	distclean-tags distcleancheck distdir distuninstallcheck dvi \
-	dvi-am html html-am info info-am install install-am \
-	install-data install-data-am install-dvi install-dvi-am \
-	install-exec install-exec-am install-html install-html-am \
-	install-info install-info-am install-man install-man1 \
-	install-nobase_dist_dataDATA install-pdf install-pdf-am \
-	install-ps install-ps-am install-strip installcheck \
-	installcheck-am installdirs installdirs-am maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-generic pdf \
-	pdf-am ps ps-am tags tags-am uninstall uninstall-am \
-	uninstall-man uninstall-man1 uninstall-nobase_dist_dataDATA
+	am--refresh check check-am check-local clean clean-cscope \
+	clean-generic cscope cscopelist-am ctags ctags-am dist \
+	dist-all dist-bzip2 dist-gzip dist-lzip dist-shar dist-tarZ \
+	dist-xz dist-zip dist-zstd distcheck distclean \
+	distclean-generic distclean-hdr distclean-tags distcleancheck \
+	distdir distuninstallcheck dvi dvi-am html html-am info \
+	info-am install install-am install-data install-data-am \
+	install-dvi install-dvi-am install-exec install-exec-am \
+	install-html install-html-am install-info install-info-am \
+	install-man install-man1 install-nobase_dist_dataDATA \
+	install-pdf install-pdf-am install-ps install-ps-am \
+	install-strip installcheck installcheck-am installdirs \
+	installdirs-am maintainer-clean maintainer-clean-generic \
+	mostlyclean mostlyclean-generic pdf pdf-am ps ps-am tags \
+	tags-am uninstall uninstall-am uninstall-man uninstall-man1 \
+	uninstall-nobase_dist_dataDATA
 
 .PRECIOUS: Makefile
 
+
+check-local:
+	@set -e; \
+	  tmp=$$(mktemp -d "$${TMPDIR:-/tmp}/xplanet-tests.XXXXXX"); \
+	  trap 'rm -rf -- "$$tmp"' EXIT; \
+	  trap 'exit 1' HUP INT TERM; \
+	  $(CC) $(CPPFLAGS) $(CFLAGS) -I"$(abs_srcdir)/src/libsgp4sdp4" \
+	    "$(abs_srcdir)/tests/tle_catalog.c" \
+	    "$(abs_builddir)/src/libsgp4sdp4/libsgp4sdp4.a" -lm -o "$$tmp/tle-catalog"; \
+	  "$$tmp/tle-catalog"; \
+	  $(CXX) $(CPPFLAGS) $(CXXFLAGS) -I"$(abs_srcdir)/src" \
+	    "$(abs_srcdir)/tests/map_reduction.cpp" -o "$$tmp/map-reduction"; \
+	  "$$tmp/map-reduction"; \
+	  $(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -I"$(abs_srcdir)/src" -I"$(abs_builddir)" \
+	    "$(abs_srcdir)/tests/image_read.cpp" "$(abs_builddir)/src/libimage/libimage.a" \
+	    $(GRAPHICS_LIBS) -o "$$tmp/image-read"; \
+	  (cd "$$tmp" && ./image-read); \
+	  $(CXX) $(CPPFLAGS) $(CXXFLAGS) -I"$(abs_srcdir)/src" \
+	    "$(abs_srcdir)/tests/rayleigh_table.cpp" -o "$$tmp/rayleigh-table"; \
+	  (cd "$$tmp" && ./rayleigh-table); \
+	  $(CXX) $(CPPFLAGS) $(CXXFLAGS) -I"$(abs_srcdir)/src" \
+	    "$(abs_srcdir)/tests/orbit_math.cpp" -o "$$tmp/orbit-math"; \
+	  "$$tmp/orbit-math"; \
+	  $(CXX) $(CPPFLAGS) $(CXXFLAGS) -I"$(abs_srcdir)/src" \
+	    "$(abs_srcdir)/tests/parse_token.cpp" -o "$$tmp/parse-token"; \
+	  "$$tmp/parse-token"
+	$(SHELL) "$(abs_srcdir)/tests/check-renderer.sh" "$(abs_builddir)/src/xplanet" "$(abs_srcdir)/xplanet"
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

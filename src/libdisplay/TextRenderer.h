@@ -8,7 +8,7 @@ class DisplayBase;
 
 class TextRenderer
 {
- public:
+public:
     TextRenderer(DisplayBase *display);
     virtual ~TextRenderer();
 
@@ -45,7 +45,7 @@ class TextRenderer
 
     unsigned long UTF8ToUnicode(const std::vector<unsigned char> &text);
 
- protected:
+protected:
 
     DisplayBase *display_;
     
@@ -54,7 +54,7 @@ class TextRenderer
 
     double opacity_;
 
- private:
+private:
 };
 
 #endif

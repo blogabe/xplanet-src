@@ -19,7 +19,7 @@ extern "C" {
 # if defined __STDC__ && __STDC__
         const char *name;
 # else
-        char *name;
+    char *name;
 # endif
         /* has_arg can't be an enum because some compilers complain about
            type mismatches in all the code that assumes it is an int.  */
@@ -32,7 +32,7 @@ extern "C" {
 # define required_argument      1
 # define optional_argument      2
 
-extern int getopt_long_only (int __argc, char *const *__argv,
+    extern int getopt_long_only (int __argc, char *const *__argv,
                              const char *__shortopts,
                              const struct option *__longopts, int *__longind);
 

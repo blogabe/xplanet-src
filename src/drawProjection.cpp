@@ -28,9 +28,9 @@ arrangeMarkers(multimap<double, Annotation *> &annotationMap,
 
 void
 drawProjection(DisplayBase *display, Planet *target,
-               const double upX, const double upY, const double upZ, 
-               map<double, Planet *> &planetsFromSunMap,
-               PlanetProperties *planetProperties)
+                    const double upX, const double upY, const double upZ,
+                    map<double, Planet *> &planetsFromSunMap,
+                    PlanetProperties *planetProperties, string &unreadableMap)
 {
     const int height = display->Height();
     const int width = display->Width();
@@ -75,9 +75,9 @@ drawProjection(DisplayBase *display, Planet *target,
                   options->Latitude(), options->Longitude(), 
                   width, height, options->Radius() * height,
                   target, ring, planetsFromSunMap,
-                  planetProperties);
+                  planetProperties, unreadableMap);
 
-    if (!options->OutputMapRect().empty())
+    if (unreadableMap.empty() && !options->OutputMapRect().empty())
     {
         if (!m->Write(options->OutputMapRect().c_str()))
         {

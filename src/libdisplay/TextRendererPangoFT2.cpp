@@ -43,7 +43,7 @@ TextRendererPangoFT2::~TextRendererPangoFT2()
     g_object_unref(layout_);
     pango_font_description_free(fontDescription_);
     g_object_unref(context_);
-//    g_object_unref(fontMap_);
+    //    g_object_unref(fontMap_);
     pango_ft2_shutdown_display();
 }
 

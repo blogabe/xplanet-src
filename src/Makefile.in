@@ -102,14 +102,15 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am__xplanet_SOURCES_DIST = Map.cpp Map.h Options.cpp Options.h \
-	PlanetProperties.h PlanetProperties.cpp Ring.cpp Ring.h \
-	Satellite.h Satellite.cpp Separation.h Separation.cpp View.cpp \
-	View.h body.h buildPlanetMap.h buildPlanetMap.cpp createMap.h \
-	createMap.cpp drawMultipleBodies.cpp drawProjection.cpp \
-	findBodyXYZ.h findBodyXYZ.cpp findFile.h findFile.cpp getopt.c \
-	getopt.h getopt1.c keywords.h parse.h parse.cpp parseColor.h \
-	parseColor.cpp printVersion.cpp readConfig.cpp \
+am__xplanet_SOURCES_DIST = Map.cpp Map.h MapReduction.h OrbitMath.h \
+	Options.cpp Options.h PlanetProperties.h PlanetProperties.cpp \
+	Ring.cpp Ring.h Satellite.h Satellite.cpp Separation.h \
+	Separation.cpp View.cpp View.h body.h buildPlanetMap.h \
+	buildPlanetMap.cpp createMap.h createMap.cpp \
+	drawMultipleBodies.cpp drawProjection.cpp findBodyXYZ.h \
+	findBodyXYZ.cpp findFile.h findFile.cpp getopt.c getopt.h \
+	getopt1.c keywords.h ParseToken.h parse.h parse.cpp \
+	parseColor.h parseColor.cpp printVersion.cpp readConfig.cpp \
 	readOriginFile.h readOriginFile.cpp satrings.h ssec.cpp \
 	setPositions.h setPositions.cpp sphericalToPixel.h \
 	sphericalToPixel.cpp xpGetopt.h xpUtil.cpp xpUtil.h \
@@ -285,8 +286,6 @@ ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
-FREETYPE2_CFLAGS = @FREETYPE2_CFLAGS@
-FREETYPE2_LIBS = @FREETYPE2_LIBS@
 FREETYPE_CFLAGS = @FREETYPE_CFLAGS@
 FREETYPE_LIBS = @FREETYPE_LIBS@
 GRAPHICS_LIBS = @GRAPHICS_LIBS@
@@ -394,6 +393,8 @@ AM_LDFLAGS = @xplanet_LDFLAGS@
 xplanet_SOURCES = \
 	Map.cpp			\
 	Map.h			\
+	MapReduction.h		\
+	OrbitMath.h		\
 	Options.cpp		\
 	Options.h		\
 	PlanetProperties.h	\
@@ -421,6 +422,7 @@ xplanet_SOURCES = \
 	getopt.h		\
 	getopt1.c		\
 	keywords.h		\
+	ParseToken.h		\
 	parse.h			\
 	parse.cpp  		\
 	parseColor.h		\

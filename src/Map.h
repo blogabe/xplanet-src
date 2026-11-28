@@ -9,7 +9,7 @@ class Ring;
 
 class Map
 {
- public:
+public:
     Map(const int w, const int h);
 
     // Use this constructor if there are no image maps
@@ -42,7 +42,7 @@ class Map
 
     bool Write(const char *filename) const; 
 
- private:
+private:
     int width_, height_, area_;
     bool mapbounds_;
 

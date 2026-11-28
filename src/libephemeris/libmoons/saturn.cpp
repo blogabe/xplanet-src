@@ -131,7 +131,7 @@ elemHyperion(const double jd, double elem[6])
 
 void
 satsat(const double jd, const body b, 
-       double &X, double &Y, double &Z)
+            double &X, double &Y, double &Z)
 {
     double elem[6] = { 0, 0, 0, 0, 0, 0 };
 
@@ -283,7 +283,7 @@ satsat(const double jd, const body b,
         // rotate to earth equator J2000
         const double eps = 23.4392911 * deg_to_rad;
         rotateX(X, Y, Z, -eps);
-/*      
+        /*
         const double VX1 = vx1 * rtp + vy1 * rdg;
         const double VY1 = vx1 * rdg + vy1 * rtq;
         const double VZ1 = (-vx1 * elem[5] + vy1 * elem[4]) * dwho;

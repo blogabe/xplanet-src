@@ -9,7 +9,7 @@
 
 class PlanetProperties
 {
- public:
+public:
     PlanetProperties(const body index);
     ~PlanetProperties();
 
@@ -42,8 +42,9 @@ class PlanetProperties
     const unsigned char * Color() const { return(color_); };
     void Color(unsigned char color[3]) { memcpy(color_, color, 3); };
 
-    void DayMap(const std::string &dayMap) { dayMap_ = dayMap; };
+    void DayMap(const std::string &dayMap) { dayMap_ = dayMap; dayMapExplicit_ = true; };
     const std::string & DayMap() const           { return(dayMap_); };
+    bool DayMapExplicit() const { return dayMapExplicit_; };
 
     void Grid(const bool g) { grid_ = g; };
     bool Grid() const { return(grid_); };
@@ -84,15 +85,15 @@ class PlanetProperties
     bool MapBounds() const { return(mapBounds_); };
     void MapBounds(double &uly, double &ulx, 
                    double &lry, double &lrx) const
-        {
-            uly = mapUly_; ulx = mapUlx_; lry = mapLry_; lrx = mapLrx_;
-        };
+    {
+        uly = mapUly_; ulx = mapUlx_; lry = mapLry_; lrx = mapLrx_;
+    };
     
     void MapBounds(bool b, double uly, double ulx, 
                    double lry, double lrx)
-        {
-            mapBounds_ = b; mapUly_ = uly; mapUlx_ = ulx; mapLry_ = lry; mapLrx_ = lrx;
-        };
+    {
+        mapBounds_ = b; mapUly_ = uly; mapUlx_ = ulx; mapLry_ = lry; mapLrx_ = lrx;
+    };
     
     double MinRadiusForLabel() const { return(minRadiusForLabel_); };
     void MinRadiusForLabel(double m) { minRadiusForLabel_ = m; };
@@ -151,7 +152,7 @@ class PlanetProperties
     void DelOrbit(const double d) { delOrbit_ = d; };
     double DelOrbit() const { return(delOrbit_); };
 
- private:
+private:
 
     body index_;
 
@@ -171,6 +172,7 @@ class PlanetProperties
     unsigned char color_[3];
 
     std::string dayMap_;
+    bool dayMapExplicit_;
 
     double delOrbit_;
     bool drawOrbit_;

@@ -1,3 +1,12 @@
+Origin files replay observer positions relative to the chosen body. The
+bundled Galileo and Cassini tracks are historical examples, not current
+spacecraft positions. Use file output to try them without setting a desktop.
+
+One frame is produced per record; -origin_file takes its frame count from
+the file, even if -num_times was supplied. For a single-frame preview,
+copy just one data row to a new file. Omit -projection for a globe and
+supply surface maps for bodies without a bundled texture.
+
 The format of an origin file is
 YYYYMMDD.HHMMSS	 range	lat  lon  [localtime]
 

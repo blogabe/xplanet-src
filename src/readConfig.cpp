@@ -1,4 +1,7 @@
 #include <clocale>
+#include <cmath>
+#include <limits>
+#include <locale>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -20,8 +23,67 @@ using namespace std;
 static PlanetProperties *defaultProperties;
 static PlanetProperties *currentProperties;
 
+template <typename Number>
+static bool
+readConfigNumber(const char *text, Number &number)
+{
+    if (text == NULL) return false;
+    istringstream stream(text);
+    stream.imbue(locale::classic());
+    if (!(stream >> number) || !std::isfinite(number)) return false;
+    stream >> ws;
+    return stream.eof();
+}
+
+// Keep the integer extraction (and its overflow check), but accept a
+// decimal suffix made entirely of zeroes. Do not round through a float:
+// even a fraction too small to survive floating-point conversion is invalid.
+static bool
+readConfigInteger(const char *text, int &number)
+{
+    if (text == NULL) return false;
+    istringstream stream(text);
+    stream.imbue(locale::classic());
+    int value;
+    if (!(stream >> value)) return false;
+    if (stream.peek() == '.')
+    {
+        stream.get();
+        if (stream.get() != '0') return false;
+        while (stream.peek() == '0') stream.get();
+    }
+    stream >> ws;
+    if (!stream.eof()) return false;
+    number = value;
+    return true;
+}
+
+template <typename Number, size_t Count>
+static bool
+readConfigTuple(const char *text, Number (&values)[Count])
+{
+    if (text == NULL) return false;
+    istringstream stream(text);
+    stream.imbue(locale::classic());
+    for (size_t i = 0; i < Count; ++i)
+    {
+        if (!(stream >> values[i]) || !std::isfinite(values[i])) return false;
+        char comma;
+        if (i + 1 < Count && (!(stream >> comma) || comma != ',')) return false;
+    }
+    stream >> ws;
+    return stream.eof();
+}
+
 static void
-readConfig(const char *line, PlanetProperties *planetProperties[])
+numericWarning(const string &location, const char *field)
+{
+    xpWarn(location + ": invalid " + field + " value; keeping the previous value.\n",
+           __FILE__, __LINE__);
+}
+
+static void
+readConfig(const char *line, PlanetProperties *planetProperties[], const string &location)
 {
     int i = 0;
     while (isDelimiter(line[i]))
@@ -46,10 +108,15 @@ readConfig(const char *line, PlanetProperties *planetProperties[])
         {
         case ARC_COLOR:
         {
-            unsigned char r, g, b;
-            if (sscanf(returnString, "%hhu,%hhu,%hhu", &r, &g, &b) == 3)
+            int rgb[3];
+            if (readConfigTuple(returnString, rgb) &&
+                rgb[0] >= 0 && rgb[0] <= 255 && rgb[1] >= 0 && rgb[1] <= 255 &&
+                rgb[2] >= 0 && rgb[2] <= 255)
             {
-                unsigned char color[3] = { r, g, b };
+                unsigned char color[3] = {
+                    static_cast<unsigned char>(rgb[0]),
+                    static_cast<unsigned char>(rgb[1]),
+                    static_cast<unsigned char>(rgb[2]) };
                 currentProperties->ArcColor(color);
             }
             else
@@ -115,17 +182,23 @@ readConfig(const char *line, PlanetProperties *planetProperties[])
         break;
         case BUMP_SCALE:
         {
-            checkLocale(LC_NUMERIC, "C");
             double bumpScale;
-            sscanf(returnString, "%lf", &bumpScale);
+            if (!readConfigNumber(returnString, bumpScale))
+            {
+                numericWarning(location, "bump_scale");
+                break;
+            }
             currentProperties->BumpScale(bumpScale);
-            checkLocale(LC_NUMERIC, "");
         }
         break;
         case BUMP_SHADE:
         {
             int s;
-            sscanf(returnString, "%d", &s);
+            if (!readConfigInteger(returnString, s))
+            {
+                numericWarning(location, "bump_shade");
+                break;
+            }
             if (s < 0) 
                 s = 0;
             else if (s > 100) 
@@ -135,11 +208,13 @@ readConfig(const char *line, PlanetProperties *planetProperties[])
         break;
         case CLOUD_GAMMA:
         {
-            checkLocale(LC_NUMERIC, "C");
             double cloudGamma;
-            sscanf(returnString, "%lf", &cloudGamma);
+            if (!readConfigNumber(returnString, cloudGamma) || cloudGamma <= 0)
+            {
+                numericWarning(location, "cloud_gamma");
+                break;
+            }
             currentProperties->CloudGamma(cloudGamma);
-            checkLocale(LC_NUMERIC, "");
         }
         break;
         case CLOUD_MAP:
@@ -160,13 +235,17 @@ readConfig(const char *line, PlanetProperties *planetProperties[])
         }
         break;
         case CLOUD_SSEC:
-          currentProperties->SSECMap(returnString[0] == 't' 
+            currentProperties->SSECMap(returnString[0] == 't'
                                      || returnString[0] == 'T');
-          break;
+            break;
         case CLOUD_THRESHOLD:
         {
             int t;
-            sscanf(returnString, "%d", &t);
+            if (!readConfigInteger(returnString, t))
+            {
+                numericWarning(location, "cloud_threshold");
+                break;
+            }
             if (t < 0) 
                 t = 0;
             else if (t > 255) 
@@ -176,10 +255,15 @@ readConfig(const char *line, PlanetProperties *planetProperties[])
         break;
         case COLOR:
         {
-            unsigned char r, g, b;
-            if (sscanf(returnString, "%hhu,%hhu,%hhu", &r, &g, &b) == 3)
+            int rgb[3];
+            if (readConfigTuple(returnString, rgb) &&
+                rgb[0] >= 0 && rgb[0] <= 255 && rgb[1] >= 0 && rgb[1] <= 255 &&
+                rgb[2] >= 0 && rgb[2] <= 255)
             {
-                unsigned char color[3] = { r, g, b };
+                unsigned char color[3] = {
+                    static_cast<unsigned char>(rgb[0]),
+                    static_cast<unsigned char>(rgb[1]),
+                    static_cast<unsigned char>(rgb[2]) };
                 currentProperties->Color(color);
             }
             else
@@ -223,7 +307,11 @@ readConfig(const char *line, PlanetProperties *planetProperties[])
         case GRID1:
         {
             int grid1;
-            sscanf(returnString, "%d", &grid1);
+            if (!readConfigInteger(returnString, grid1))
+            {
+                numericWarning(location, "grid1");
+                break;
+            }
             if (grid1 < 0 || grid1 > 90) 
                 xpExit("grid1 must be between 0 and 90\n", 
                        __FILE__, __LINE__);
@@ -233,7 +321,11 @@ readConfig(const char *line, PlanetProperties *planetProperties[])
         case GRID2:
         {
             int grid2;
-            sscanf(returnString, "%d", &grid2);
+            if (!readConfigInteger(returnString, grid2))
+            {
+                numericWarning(location, "grid2");
+                break;
+            }
             if (grid2 < 0)
                 xpExit("grid2 must be positive\n", __FILE__, __LINE__);
             currentProperties->Grid2(grid2);
@@ -241,10 +333,15 @@ readConfig(const char *line, PlanetProperties *planetProperties[])
         break;
         case GRID_COLOR:
         {
-            unsigned char r, g, b;
-            if (sscanf(returnString, "%hhu,%hhu,%hhu", &r, &g, &b) == 3)
+            int rgb[3];
+            if (readConfigTuple(returnString, rgb) &&
+                rgb[0] >= 0 && rgb[0] <= 255 && rgb[1] >= 0 && rgb[1] <= 255 &&
+                rgb[2] >= 0 && rgb[2] <= 255)
             {
-                unsigned char color[3] = { r, g, b };
+                unsigned char color[3] = {
+                    static_cast<unsigned char>(rgb[0]),
+                    static_cast<unsigned char>(rgb[1]),
+                    static_cast<unsigned char>(rgb[2]) };
                 currentProperties->GridColor(color);
             }
             else
@@ -256,12 +353,11 @@ readConfig(const char *line, PlanetProperties *planetProperties[])
         break;
         case MAGNIFY:
         {
-            checkLocale(LC_NUMERIC, "C");
             double value;
-            sscanf(returnString, "%lf", &value);
-            if (value < 0) value = 1;
-            currentProperties->Magnify(value);
-            checkLocale(LC_NUMERIC, "");
+            if (readConfigNumber(returnString, value) && value > 0)
+                currentProperties->Magnify(value);
+            else
+                numericWarning(location, "magnify");
         }
         break;
         case MAP_BOUNDS:
@@ -275,28 +371,25 @@ readConfig(const char *line, PlanetProperties *planetProperties[])
                        << "planet's section (like [earth]).\n";
                 xpWarn(errStr.str(), __FILE__, __LINE__);
             }
-            checkLocale(LC_NUMERIC, "C");
-            double uly, ulx, lry, lrx;
-            int numRead = sscanf(returnString, "%lf,%lf,%lf,%lf", 
-                                 &uly, &ulx, &lry, &lrx);
-            if (numRead == 4)
-            {
-                currentProperties->MapBounds(true, uly, ulx, lry, lrx);
-            }
+            double bounds[4];
+            if (readConfigTuple(returnString, bounds) && bounds[0] > bounds[2]
+                && bounds[0] <= 90 && bounds[2] >= -90 && bounds[1] != bounds[3])
+                currentProperties->MapBounds(true, bounds[0], bounds[1], bounds[2], bounds[3]);
             else
-            {
-                xpWarn("Need four values for mapbounds\n",
-                       __FILE__, __LINE__);
-            }
-            checkLocale(LC_NUMERIC, "");
+                numericWarning(location, "map_bounds");
         }
         break;
         case MARKER_COLOR:
         {
-            unsigned char r, g, b;
-            if (sscanf(returnString, "%hhu,%hhu,%hhu", &r, &g, &b) == 3)
+            int rgb[3];
+            if (readConfigTuple(returnString, rgb) &&
+                rgb[0] >= 0 && rgb[0] <= 255 && rgb[1] >= 0 && rgb[1] <= 255 &&
+                rgb[2] >= 0 && rgb[2] <= 255)
             {
-                unsigned char color[3] = { r, g, b };
+                unsigned char color[3] = {
+                    static_cast<unsigned char>(rgb[0]),
+                    static_cast<unsigned char>(rgb[1]),
+                    static_cast<unsigned char>(rgb[2]) };
                 currentProperties->MarkerColor(color);
             }
             else
@@ -315,7 +408,11 @@ readConfig(const char *line, PlanetProperties *planetProperties[])
         case MARKER_FONTSIZE:
         { 
             int fontSize;
-            sscanf(returnString, "%d", &fontSize);
+            if (!readConfigInteger(returnString, fontSize))
+            {
+                numericWarning(location, "marker_fontsize");
+                break;
+            }
             if (fontSize > 0)
             {
                 currentProperties->MarkerFontSize(fontSize);
@@ -329,29 +426,35 @@ readConfig(const char *line, PlanetProperties *planetProperties[])
         break;
         case MAX_RAD_FOR_LABEL:
         {
-            checkLocale(LC_NUMERIC, "C");
             double value;
-            sscanf(returnString, "%lf", &value);
+            if (!readConfigNumber(returnString, value))
+            {
+                numericWarning(location, "max_rad_for_label");
+                break;
+            }
             currentProperties->MaxRadiusForLabel(value);
-            checkLocale(LC_NUMERIC, "");
         }
         break;
         case MIN_RAD_FOR_LABEL:
         {
-            checkLocale(LC_NUMERIC, "C");
             double value;
-            sscanf(returnString, "%lf", &value);
+            if (!readConfigNumber(returnString, value))
+            {
+                numericWarning(location, "min_rad_for_label");
+                break;
+            }
             currentProperties->MinRadiusForLabel(value);
-            checkLocale(LC_NUMERIC, "");
         }
         break;
         case MIN_RAD_FOR_MARKERS:
         {
-            checkLocale(LC_NUMERIC, "C");
             double value;
-            sscanf(returnString, "%lf", &value);
+            if (!readConfigNumber(returnString, value))
+            {
+                numericWarning(location, "min_rad_for_markers");
+                break;
+            }
             currentProperties->MinRadiusForMarkers(value);
-            checkLocale(LC_NUMERIC, "");
         }
         break;
         case NAME:
@@ -380,30 +483,28 @@ readConfig(const char *line, PlanetProperties *planetProperties[])
             break;
         case ORBIT:
         {
-            checkLocale(LC_NUMERIC, "C");
-            double start, stop, delta;
-            int numRead = sscanf(returnString, "%lf,%lf,%lf", 
-                                 &start, &stop, &delta);
-            if (numRead == 3)
+            double orbit[3];
+            if (readConfigTuple(returnString, orbit) && orbit[0] <= orbit[1] && orbit[2] > 0)
             {
-                currentProperties->StartOrbit(start);
-                currentProperties->StopOrbit(stop);
-                currentProperties->DelOrbit(delta);
+                currentProperties->StartOrbit(orbit[0]);
+                currentProperties->StopOrbit(orbit[1]);
+                currentProperties->DelOrbit(orbit[2]);
             }
             else
-            {
-                xpWarn("Need three values for orbit\n", 
-                       __FILE__, __LINE__);
-            }
-            checkLocale(LC_NUMERIC, "");
+                numericWarning(location, "orbit");
         }
         break;
         case ORBIT_COLOR:
         {
-            unsigned char r, g, b;
-            if (sscanf(returnString, "%hhu,%hhu,%hhu", &r, &g, &b) == 3)
+            int rgb[3];
+            if (readConfigTuple(returnString, rgb) &&
+                rgb[0] >= 0 && rgb[0] <= 255 && rgb[1] >= 0 && rgb[1] <= 255 &&
+                rgb[2] >= 0 && rgb[2] <= 255)
             {
-                unsigned char color[3] = { r, g, b };
+                unsigned char color[3] = {
+                    static_cast<unsigned char>(rgb[0]),
+                    static_cast<unsigned char>(rgb[1]),
+                    static_cast<unsigned char>(rgb[2]) };
                 currentProperties->OrbitColor(color);
             }
             else
@@ -423,11 +524,13 @@ readConfig(const char *line, PlanetProperties *planetProperties[])
             break;
         case RAYLEIGH_EMISSION_WEIGHT:
         {
-            checkLocale(LC_NUMERIC, "C");
             double scale;
-            sscanf(returnString, "%lf", &scale);
+            if (!readConfigNumber(returnString, scale))
+            {
+                numericWarning(location, "rayleigh_emission_weight");
+                break;
+            }
             currentProperties->RayleighEmissionWeight(scale);
-            checkLocale(LC_NUMERIC, "");
         }
         break;
         case RAYLEIGH_FILE:
@@ -435,20 +538,24 @@ readConfig(const char *line, PlanetProperties *planetProperties[])
             break;
         case RAYLEIGH_LIMB_SCALE:
         {
-            checkLocale(LC_NUMERIC, "C");
             double scale;
-            sscanf(returnString, "%lf", &scale);
+            if (!readConfigNumber(returnString, scale))
+            {
+                numericWarning(location, "rayleigh_limb_scale");
+                break;
+            }
             currentProperties->RayleighLimbScale(scale);
-            checkLocale(LC_NUMERIC, "");
         }
         break;
         case RAYLEIGH_SCALE:
         {
-            checkLocale(LC_NUMERIC, "C");
             double scale;
-            sscanf(returnString, "%lf", &scale);
+            if (!readConfigNumber(returnString, scale))
+            {
+                numericWarning(location, "rayleigh_scale");
+                break;
+            }
             currentProperties->RayleighScale(scale);
-            checkLocale(LC_NUMERIC, "");
         }
         break;
         case SATELLITE_FILE:
@@ -456,8 +563,12 @@ readConfig(const char *line, PlanetProperties *planetProperties[])
             break;
         case SHADE:
         {
-            int s;
-            sscanf(returnString, "%d", &s);
+            double s;
+            if (!readConfigNumber(returnString, s) || std::trunc(s) != s)
+            {
+                numericWarning(location, "shade");
+                break;
+            }
             if (s < 0) 
                 s = 0;
             else if (s > 100) 
@@ -470,10 +581,15 @@ readConfig(const char *line, PlanetProperties *planetProperties[])
             break;
         case TEXT_COLOR:
         {
-            unsigned char r, g, b;
-            if (sscanf(returnString, "%hhu,%hhu,%hhu", &r, &g, &b) == 3)
+            int rgb[3];
+            if (readConfigTuple(returnString, rgb) &&
+                rgb[0] >= 0 && rgb[0] <= 255 && rgb[1] >= 0 && rgb[1] <= 255 &&
+                rgb[2] >= 0 && rgb[2] <= 255)
             {
-                unsigned char color[3] = { r, g, b };
+                unsigned char color[3] = {
+                    static_cast<unsigned char>(rgb[0]),
+                    static_cast<unsigned char>(rgb[1]),
+                    static_cast<unsigned char>(rgb[2]) };
                 currentProperties->TextColor(color);
             }
             else
@@ -486,7 +602,11 @@ readConfig(const char *line, PlanetProperties *planetProperties[])
         case THICKNESS:
         {
             int thickness;
-            sscanf(returnString, "%d", &thickness);
+            if (!readConfigInteger(returnString, thickness))
+            {
+                numericWarning(location, "thickness");
+                break;
+            }
             if (thickness > 0)
             {
                 currentProperties->ArcThickness(thickness);
@@ -501,7 +621,11 @@ readConfig(const char *line, PlanetProperties *planetProperties[])
         case TWILIGHT:
         {
             int value;
-            sscanf(returnString, "%d", &value);
+            if (!readConfigInteger(returnString, value))
+            {
+                numericWarning(location, "twilight");
+                break;
+            }
             if (value >= 0 && value <= 90)
             {
                 currentProperties->Twilight(value);
@@ -549,9 +673,29 @@ readConfigFile(string configFile, PlanetProperties *planetProperties[])
         currentProperties = defaultProperties;
 
         ifstream inFile(configFile.c_str());
-        char *line = new char[256];
-        while (inFile.getline(line, 256, '\n'))
-            readConfig(line, planetProperties);
+        char line[4096];
+        size_t lineNumber = 0;
+        for (;;)
+        {
+            ++lineNumber;
+            if (inFile.getline(line, sizeof(line)))
+            {
+                ostringstream location;
+                location << configFile << ':' << lineNumber;
+                readConfig(line, planetProperties, location.str());
+            }
+            else if (inFile.eof() || inFile.bad() || inFile.gcount() == 0)
+                break;
+            else
+            {
+                inFile.clear();
+                inFile.ignore(numeric_limits<streamsize>::max(), '\n');
+                ostringstream message;
+                message << configFile << ':' << lineNumber
+                        << ": ignoring an overlong configuration line\n";
+                xpWarn(message.str(), __FILE__, __LINE__);
+            }
+        }
         
         // This condition will only be true if [default] is the only
         // section in the config file.  In this case, set all planet
@@ -565,7 +709,6 @@ readConfigFile(string configFile, PlanetProperties *planetProperties[])
         }
 
         inFile.close();
-        delete [] line;
 
         delete defaultProperties;
     }

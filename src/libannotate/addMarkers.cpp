@@ -360,32 +360,13 @@ readMarkerFile(const char *line, Planet *planet, const double pR,
         // timezone is defined, run the name string through strftime()
         if (name.find("%") != string::npos && !timezone.empty())
         {
-            const char *tzEnv = getenv("TZ");
-            string tzSave;
-            if (tzEnv != NULL)
-            {
-                tzSave = "TZ=";
-                tzSave += tzEnv;
-            }
-
-            string tz = "TZ=";
-            tz += timezone;
-            putenv((char *) tz.c_str());
-
-            tzset();
+            ScopedTimeZone markerTimezone(timezone.c_str());
 
             if (!lang.empty())
                 checkLocale(LC_ALL, lang.c_str());
 
             // run name string through strftime() and convert to UTF-8
             strftimeUTF8(name);
-
-            if (tzEnv == NULL) 
-                removeFromEnvironment("TZ"); 
-            else
-                putenv((char *) tzSave.c_str()); 
-
-            tzset();
 
             if (!lang.empty())
                 checkLocale(LC_ALL, "");
@@ -411,12 +392,12 @@ readMarkerFile(const char *line, Planet *planet, const double pR,
 // Used for labeling planets/moons
 void
 addMarkers(PlanetProperties *planetProperties, Planet *planet, 
-           const double pixel_radius,
-           const double X, const double Y, const double Z,
-           View *view, ProjectionBase *projection, 
-           const int width, const int height, 
-           map<double, Planet *> &planetsFromSunMap, 
-           multimap<double, Annotation *> &annotationMap)
+                const double pixel_radius,
+                const double X, const double Y, const double Z,
+                View *view, ProjectionBase *projection,
+                const int width, const int height,
+                map<double, Planet *> &planetsFromSunMap,
+                multimap<double, Annotation *> &annotationMap)
 {
     vector<string> markerfiles = planetProperties->MarkerFiles();
     vector<string>::iterator ii = markerfiles.begin();
@@ -429,7 +410,8 @@ addMarkers(PlanetProperties *planetProperties, Planet *planet,
         {
             ifstream inFile(markerFile.c_str());
             char *line = new char[MAX_LINE_LENGTH];
-            while (inFile.getline (line, MAX_LINE_LENGTH, '\n'))
+            size_t number = 0;
+            while (nextAnnotationRecord(inFile, line, MAX_LINE_LENGTH, markerFile, number))
             {
                 unsigned char color[3];
                 memcpy(color, planetProperties->MarkerColor(), 3);
@@ -459,8 +441,8 @@ addMarkers(PlanetProperties *planetProperties, Planet *planet,
 // Used for labeling star fields
 void
 addMarkers(View *view, const int width, const int height, 
-           map<double, Planet *> &planetsFromSunMap, 
-           multimap<double, Annotation *> &annotationMap)
+                map<double, Planet *> &planetsFromSunMap,
+                multimap<double, Annotation *> &annotationMap)
 {
     Options *options = Options::getInstance();
 
@@ -475,7 +457,8 @@ addMarkers(View *view, const int width, const int height,
         {
             ifstream inFile(markerFile.c_str());
             char *line = new char[MAX_LINE_LENGTH];
-            while (inFile.getline (line, MAX_LINE_LENGTH, '\n'))
+            size_t number = 0;
+            while (nextAnnotationRecord(inFile, line, MAX_LINE_LENGTH, markerFile, number))
             {
                 unsigned char color[3];
                 memcpy(color, options->Color(), 3);

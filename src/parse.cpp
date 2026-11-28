@@ -4,6 +4,7 @@
 #include <string>
 using namespace std;
 
+#include "ParseToken.h"
 #include "keywords.h"
 #include "parseColor.h"
 #include "xpUtil.h"
@@ -21,12 +22,7 @@ isDelimiter(char c)
 bool
 isEndOfLine(char c)
 {
-    // 13 is DOS end-of-line, 28 is the file separator
-    bool returnValue = (c == '\0' || c == 13 || c == 28);
-
-    if (commentEndsLine) returnValue = (c == '#' || returnValue);
-
-    return(returnValue); 
+    return parseToken::isLineTerminator(c, commentEndsLine);
 }
 
 static void
@@ -89,26 +85,27 @@ getValueIncludingComment(const char *line, int &i, const char *key,
     return(returnValue);
 }
 
+// Match a prefixed assignment only when its separator is on this line.
 static bool
 getValueAfter(const char *line, int &i, const char *key, const char endChar,
-         char *&returnstring)
-// If the line contains the 'key', skip past 'endChar' and return
-// everything to the end of the line in 'returnString'
+              char *&returnstring)
 {
-    const unsigned int length = strlen(key);
-    if (strncmp(line + i, key, length) == 0)
-    {
-        i += length;
-        skipPastToken(i, line, endChar);        // Skips 'to' endChar
-        int istart = i + 1;     // Add another to not include endChar
-        skipPastToken(i, line);
-        returnstring = new char[i - istart + 1];
-        strncpy(returnstring, (line + istart), i - istart);
-        returnstring[i-istart] = '\0';
-        i++;
-        return(true);
-    }
-    return(false);
+    const size_t length = strlen(key);
+    if (strncmp(line + i, key, length) != 0) return false;
+
+    const int separator = parseToken::findSeparator(
+        line, i + length, endChar, commentEndsLine);
+    if (separator < 0) return false;
+
+    const int start = separator + 1;
+    i = start;
+    skipPastToken(i, line);
+    const size_t count = i - start;
+    returnstring = new char[count + 1];
+    memcpy(returnstring, line + start, count);
+    returnstring[count] = '\0';
+    ++i;
+    return true;
 }
 
 static bool

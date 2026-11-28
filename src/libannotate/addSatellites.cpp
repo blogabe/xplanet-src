@@ -13,6 +13,7 @@ using namespace std;
 #include "findFile.h"
 #include "keywords.h"
 #include "Options.h"
+#include "OrbitMath.h"
 #include "parse.h"
 #include "PlanetProperties.h"
 #include "Satellite.h"
@@ -266,10 +267,9 @@ readSatelliteFile(const char *line, Planet *planet,
 
             if (syntaxError) break;
 
-            if (!sscanf(++ptr, "%d,%d,%d", &trailStart, &trailEnd,
-                        &trailInterval) == 3)
+            if (!parseTrailWindow(ptr + 1, 1000000, 1, trailStart, trailEnd, trailInterval))
             {
-                xpWarn("Need four values for trail{}!\n", 
+                xpWarn("trail{} requires a type, an ordered start and end, and a positive interval, within supported trail limits.\n",
                        __FILE__, __LINE__);
                 syntaxError = true;
             }
@@ -291,7 +291,6 @@ readSatelliteFile(const char *line, Planet *planet,
                     syntaxError = true;
                     break;
                 }
-                if (trailInterval < 1) trailInterval = 1;
             }
         }
         break;
@@ -386,22 +385,22 @@ readSatelliteFile(const char *line, Planet *planet,
     double X0, Y0, Z0;
     earth0.getPosition(X0, Y0, Z0);
     if (trailType == ORBIT){
-      // convert lon/lat/rad to inertial XYZ, then to lon/lat/rad at
-      // time of plot
-      double jd = toJulian(startTime);
-      Planet earth(jd, EARTH);
-      earth.calcHeliocentricEquatorial();
-      double X, Y, Z;
-      earth.getPosition(X, Y, Z);
-      double sX, sY, sZ;
-      earth.PlanetographicToXYZ(sX, sY, sZ, lat, lon, rad);
-      sX -= X;
-      sY -= Y;
-      sZ -= Z;
-      sX += X0;
-      sY += Y0;
-      sZ += Z0;
-      earth0.XYZToPlanetographic(sX, sY, sZ, lat, lon, rad);
+        // convert lon/lat/rad to inertial XYZ, then to lon/lat/rad at
+        // time of plot
+        double jd = toJulian(startTime);
+        Planet earth(jd, EARTH);
+        earth.calcHeliocentricEquatorial();
+        double X, Y, Z;
+        earth.getPosition(X, Y, Z);
+        double sX, sY, sZ;
+        earth.PlanetographicToXYZ(sX, sY, sZ, lat, lon, rad);
+        sX -= X;
+        sY -= Y;
+        sZ -= Z;
+        sX += X0;
+        sY += Y0;
+        sZ += Z0;
+        earth0.XYZToPlanetographic(sX, sY, sZ, lat, lon, rad);
     }
     
     for (time_t t = startTime + interval; t <= endTime; t += interval)
@@ -412,24 +411,24 @@ readSatelliteFile(const char *line, Planet *planet,
 
         satellite->getSpherical(t, lat, lon, rad);
 
-	if (trailType == ORBIT){
-	  // convert lon/lat/rad to inertial XYZ, then to lon/lat/rad at
-	  // time of plot
-	  double jd = toJulian(t);
-	  Planet earth(jd, EARTH);
-	  earth.calcHeliocentricEquatorial();
-	  double X, Y, Z;
-	  earth.getPosition(X, Y, Z);
-	  double sX, sY, sZ;
-	  earth.PlanetographicToXYZ(sX, sY, sZ, lat, lon, rad);
-	  sX -= X;
-	  sY -= Y;
-	  sZ -= Z;
-	  sX += X0;
-	  sY += Y0;
-	  sZ += Z0;
-	  earth0.XYZToPlanetographic(sX, sY, sZ, lat, lon, rad);
-	}
+        if (trailType == ORBIT){
+          // convert lon/lat/rad to inertial XYZ, then to lon/lat/rad at
+          // time of plot
+          double jd = toJulian(t);
+          Planet earth(jd, EARTH);
+          earth.calcHeliocentricEquatorial();
+          double X, Y, Z;
+          earth.getPosition(X, Y, Z);
+          double sX, sY, sZ;
+          earth.PlanetographicToXYZ(sX, sY, sZ, lat, lon, rad);
+          sX -= X;
+          sY -= Y;
+          sZ -= Z;
+          sX += X0;
+          sY += Y0;
+          sZ += Z0;
+          earth0.XYZToPlanetographic(sX, sY, sZ, lat, lon, rad);
+        }
 
         if (outputFile.is_open()) 
         {
@@ -529,19 +528,39 @@ loadSatelliteVector(PlanetProperties *planetProperties)
         if (foundFile)
         {
             ifstream inFile(tleFile.c_str());
-            char lines[3][80];
-            while (inFile.getline(lines[0], 80))
+            char lines[3][80] = {};
+            char line[80] = {};
+            size_t number = 0;
+            bool haveFirst = false;
+            for (;;)
             {
-                if ((!inFile.getline(lines[1], 80)) 
-                    || (!inFile.getline(lines[2], 80)))
+                const auto status = readBoundedRecord(inFile, line, sizeof(line),
+                                                      tleFile, number);
+                if (status == RecordStatus::End) break;
+                if (status == RecordStatus::Invalid)
                 {
-                    ostringstream errStr;
-                    errStr << "Malformed TLE file (" << tleFile << ")?\n";
-                    xpWarn(errStr.str(), __FILE__, __LINE__);
-                    break;
+                    haveFirst = false;
+                    lines[0][0] = '\0';
+                    continue;
                 }
-                
+                if (line[0] == '1' && line[1] == ' ')
+                {
+                    if (haveFirst) lines[0][0] = '\0';
+                    memcpy(lines[1], line, sizeof(line));
+                    haveFirst = true;
+                    continue;
+                }
+                if (line[0] != '2' || line[1] != ' ')
+                {
+                    haveFirst = false;
+                    memcpy(lines[0], line, sizeof(line));
+                    continue;
+                }
+                if (!haveFirst) continue;  // Unpaired line 2; look for the next set.
+                memcpy(lines[2], line, sizeof(line));
+                haveFirst = false;
                 Satellite sat(lines);
+                lines[0][0] = '\0';
                 
                 if (!sat.isGoodData()) 
                 {
@@ -553,6 +572,8 @@ loadSatelliteVector(PlanetProperties *planetProperties)
                 
                 satelliteVector.push_back(sat);
             }
+            if (haveFirst)
+                xpWarn(tleFile + ": incomplete final TLE record.\n", __FILE__, __LINE__);
             
             inFile.close();
         }
@@ -584,7 +605,8 @@ addSatellites(PlanetProperties *planetProperties, Planet *planet,
         {
             ifstream inFile(satFile.c_str());
             char *line = new char[MAX_LINE_LENGTH];
-            while (inFile.getline (line, MAX_LINE_LENGTH, '\n'))
+            size_t number = 0;
+            while (nextAnnotationRecord(inFile, line, MAX_LINE_LENGTH, satFile, number))
                 readSatelliteFile(line, planet, view, projection,
                                   planetProperties, annotationMap);
             

@@ -183,6 +183,8 @@ ProjectionTSC::GetFace(const double x, const double y) const
         }
     }
 
+    if (returnVal < 0) return -1;
+
     // check that the point is on the cube face
     if (fabs(x - xPixel_[returnVal]) > trueWidth_/8) return(-1);
     if (fabs(y - yPixel_[returnVal]) > trueHeight_/6) return(-1);

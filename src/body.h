@@ -18,7 +18,7 @@ enum body
 };
 
 const char* const body_string[RANDOM_BODY] =
-{"sun", 
+    {"sun",
  "mercury", 
  "venus", 
  "earth", "moon", 
@@ -30,7 +30,7 @@ const char* const body_string[RANDOM_BODY] =
  "pluto", "charon"};
 
 const int naif_id[RANDOM_BODY] =
-{ 10,
+    { 10,
   199,
   299,
   399, 301,

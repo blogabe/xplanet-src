@@ -50,4 +50,31 @@ nobase_dist_data_DATA = \
 	xplanet/spice/voyager.krn	\
 	xplanet/stars/BSC
 
-EXTRA_DIST = xplanet.1 $(sources)
+EXTRA_DIST = xplanet.1 $(sources) README.md prepare-build.sh tests/README.md tests/tle_catalog.c tests/map_reduction.cpp tests/image_read.cpp tests/rayleigh_table.cpp tests/orbit_math.cpp tests/parse_token.cpp tests/check-renderer.sh
+
+check-local:
+	@set -e; \
+	  tmp=$$(mktemp -d "$${TMPDIR:-/tmp}/xplanet-tests.XXXXXX"); \
+	  trap 'rm -rf -- "$$tmp"' EXIT; \
+	  trap 'exit 1' HUP INT TERM; \
+	  $(CC) $(CPPFLAGS) $(CFLAGS) -I"$(abs_srcdir)/src/libsgp4sdp4" \
+	    "$(abs_srcdir)/tests/tle_catalog.c" \
+	    "$(abs_builddir)/src/libsgp4sdp4/libsgp4sdp4.a" -lm -o "$$tmp/tle-catalog"; \
+	  "$$tmp/tle-catalog"; \
+	  $(CXX) $(CPPFLAGS) $(CXXFLAGS) -I"$(abs_srcdir)/src" \
+	    "$(abs_srcdir)/tests/map_reduction.cpp" -o "$$tmp/map-reduction"; \
+	  "$$tmp/map-reduction"; \
+	  $(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -I"$(abs_srcdir)/src" -I"$(abs_builddir)" \
+	    "$(abs_srcdir)/tests/image_read.cpp" "$(abs_builddir)/src/libimage/libimage.a" \
+	    $(GRAPHICS_LIBS) -o "$$tmp/image-read"; \
+	  (cd "$$tmp" && ./image-read); \
+	  $(CXX) $(CPPFLAGS) $(CXXFLAGS) -I"$(abs_srcdir)/src" \
+	    "$(abs_srcdir)/tests/rayleigh_table.cpp" -o "$$tmp/rayleigh-table"; \
+	  (cd "$$tmp" && ./rayleigh-table); \
+	  $(CXX) $(CPPFLAGS) $(CXXFLAGS) -I"$(abs_srcdir)/src" \
+	    "$(abs_srcdir)/tests/orbit_math.cpp" -o "$$tmp/orbit-math"; \
+	  "$$tmp/orbit-math"; \
+	  $(CXX) $(CPPFLAGS) $(CXXFLAGS) -I"$(abs_srcdir)/src" \
+	    "$(abs_srcdir)/tests/parse_token.cpp" -o "$$tmp/parse-token"; \
+	  "$$tmp/parse-token"
+	$(SHELL) "$(abs_srcdir)/tests/check-renderer.sh" "$(abs_builddir)/src/xplanet" "$(abs_srcdir)/xplanet"

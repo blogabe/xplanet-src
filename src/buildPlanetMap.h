@@ -15,8 +15,8 @@ buildPlanetMap(const double jd, std::map<double, Planet *> &planetMap);
 
 extern void
 buildPlanetMap(const double jd, 
-	       const double oX, const double oY, const double oZ, 
-	       const bool light_time, std::map<double, Planet *> &planetMap);
+               const double oX, const double oY, const double oZ,
+               const bool light_time, std::map<double, Planet *> &planetMap);
 
 extern void
 destroyPlanetMap();

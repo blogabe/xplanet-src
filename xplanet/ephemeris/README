@@ -1,6 +1,18 @@
-Put JPL digital ephemeris files (DE200, DE405, or DE406) here to use
-for computing planetary positions.  Xplanet uses Bill Gray's code
-(http://www.projectpluto.com/jpl_eph.htm), which reads both big and
-little endian binary files.  The ephemeris files found at
-ftp://ssd.jpl.nasa.gov/pub/eph/export/unix are big endian files, but
-you do not need to do any additional byte-swapping to use them.
+Xplanet normally uses its built-in planetary positions. For a render that
+needs a higher-precision ephemeris, use -ephemeris_file with a native JPL
+binary. The ephemeris itself is not bundled.
+
+The little-endian DE440 file linux_p1550p2650.440 has been checked against
+JPL's reference data for Cartesian positions and velocities. Download it
+from the JPL native binary directory:
+
+https://ssd.jpl.nasa.gov/ftp/eph/planets/Linux/de440/
+
+For example:
+
+xplanet -ephemeris_file /path/to/linux_p1550p2650.440 -target earth \
+  -date 20260320.120000 -num_times 1 -output earth-de440.png
+
+Use a file covering the render date. SPICE .bsp files use a different
+reader; see the spice README. The native reader is based on Bill Gray's
+work: https://www.projectpluto.com/jpl_eph.htm
