@@ -7,6 +7,7 @@ using namespace std;
 
 #include <sys/stat.h>
 
+#include "findFile.h"
 #include "Options.h"
 #include "xpDefines.h"
 #include "xpUtil.h"
@@ -55,7 +56,7 @@ fileExists(string &filename)
 }
 
 bool
-findFile(string &filename, const string &subdir)
+findFile(string &filename, const string &subdir, bool warnIfMissing)
 {
     // Check if the file exists in the current directory before going
     // to searchdir
@@ -95,6 +96,8 @@ findFile(string &filename, const string &subdir)
         }
     }
 
+    if (!warnIfMissing) return false;
+
     string errMsg("Can't find ");
     errMsg += filename;
     errMsg += " in\n";
@@ -107,4 +110,34 @@ findFile(string &filename, const string &subdir)
     }
     xpWarn(errMsg, __FILE__, __LINE__);
     return(false);
+}
+
+bool
+findCompanionFile(const string &name, const string &subdir,
+                  const vector<string> &suffixes, string &filename)
+{
+    const auto search = [&](const string &stem)
+    {
+        for (const auto &suffix : suffixes)
+        {
+            string path = stem + suffix;
+            if (fileExists(path))
+            {
+                filename = path;
+                return true;
+            }
+        }
+        return false;
+    };
+
+    // Match findFile: the working directory comes before the search path.
+    if (search(name)) return true;
+    const auto directories = Options::getInstance()->getSearchDir();
+    for (auto i = directories.rbegin(); i != directories.rend(); ++i)
+    {
+        const string dir = *i + separator;
+        if (search(dir + name)) return true;
+        if (!subdir.empty() && search(dir + subdir + separator + name)) return true;
+    }
+    return false;
 }

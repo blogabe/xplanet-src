@@ -1,3 +1,9 @@
+Version 1.5.0 (unreleased)
+	* Read CelesTrak-style OMM CSV alongside existing TLE and
+	  Alpha-5 input, with decimal catalog IDs up to nine digits.
+
+	* Add a read-only scene and configuration check with JSON output.
+
 Version 1.4.0 (unreleased)
 	* Add Alpha-5 catalog IDs for compatible satellite element files.
 

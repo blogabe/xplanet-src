@@ -18,6 +18,10 @@ xplanet_SOURCES = \
 	OrbitMath.h		\
 	Options.cpp		\
 	Options.h		\
+	Omm.h			\
+	Omm.cpp			\
+	SceneValidation.h	\
+	SceneValidation.cpp	\
 	PlanetProperties.h	\
 	PlanetProperties.cpp	\
 	Ring.cpp		\

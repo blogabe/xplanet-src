@@ -1,12 +1,39 @@
-The bundled iss.tle contains historical data for examples, not live tracking.
-Use fresh TLEs for current positions: https://celestrak.org/NORAD/elements/
-Keep your active TLEs and the matching marker definitions in a separate
-search directory. The renderer can resolve the bundled iss.png icon
-without copying it into that directory. Both five-digit and Alpha-5 TLE
-catalog IDs are supported. CelesTrak exhausted its five-digit catalog
-range on 2026-07-11 and does not offer TLEs for newly cataloged six-digit
-objects; find another source of Alpha-5 TLEs for those objects.
-https://celestrak.org/NORAD/archives/sup-request.php
+Satellite marker lists and orbital elements
+===========================================
+
+A satellite_file entry names a marker list, not an orbital elements file.
+For a marker list named tracked, supply one of these companions:
+
+    tracked.tle       TLE input, including Alpha-5
+    tracked.omm.csv   OMM fields in CelesTrak's GP CSV format
+
+Xplanet looks for orbit files in the current directory, then along the
+normal search path, regardless of where the marker list was found. If both
+formats exist in the same directory, TLE takes precedence. A bundled TLE
+does not override a TLE or CSV in a higher-priority directory. Use -validate to see
+which orbit file was selected.
+
+The bundled iss.tle is historical, not live. CelesTrak does not offer TLEs
+for newly assigned six-digit catalog numbers since the five-digit range
+ran out on 2026-07-11. Use GP CSV for those objects:
+https://celestrak.org/NORAD/documentation/gp-data-formats.php
+
+For example, put the following in tracked:
+
+    100057 "Example satellite" color=yellow trail={ground,-10,10,2}
+
+Save a current GP CSV containing that decimal ID as tracked.omm.csv.
+Both files can go in the satellites subdirectory of a -searchdir.
+Add satellite_file=tracked to the [earth] section of the scene config.
+
+The CSV reader expects OMM keyword headers and UTC timestamps with a
+four-digit year. Its orbital model is SGP4 for Earth in TEME. CelesTrak
+may omit these metadata fields because the values are implicit. This
+reader is for GP CSV; OMM XML, KVN, JSON and non-SGP4 element theories
+are not supported. If an ID appears more than once in a CSV, rendering
+uses the first valid row and reports the duplicate. Use -validate as
+the first argument to identify companion or catalog-ID errors without
+rendering a frame.
 
 A sample TLE entry for the International Space Station looks like
 this:
@@ -16,7 +43,7 @@ ISS (ZARYA)
 2 25544  51.6394 213.7002 0007838 194.2620 314.2054 15.56596996165535
 
 Each line in satfile must begin with a satellite ID number (e.g. 25544
-for the ISS).  Each ID must exist in the associated TLE file. 
+for the ISS).  Each ID must exist in the associated orbital elements file.
 
 Valid additional keywords are "align", "altcirc", "color", "font",
 "fontsize", "image", "position", "spacing", "thickness", "trail",
@@ -24,7 +51,7 @@ Valid additional keywords are "align", "altcirc", "color", "font",
 identical to the usage for arc and marker files.  In addition, a
 string to be plotted with the marker may be enclosed in either double
 quotes (""), or braces ({}).  If a string is not supplied, the marker
-will take the name of the satellite supplied in the TLE file.
+will take the name of the satellite supplied in the elements file.
 
 The "altcirc" keyword draws altitude circles on the surface of the
 earth.  The format is "altcirc=angle", where a circle is drawn

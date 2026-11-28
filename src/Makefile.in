@@ -103,7 +103,8 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__xplanet_SOURCES_DIST = Map.cpp Map.h MapReduction.h OrbitMath.h \
-	Options.cpp Options.h PlanetProperties.h PlanetProperties.cpp \
+	Options.cpp Options.h Omm.h Omm.cpp SceneValidation.h \
+	SceneValidation.cpp PlanetProperties.h PlanetProperties.cpp \
 	Ring.cpp Ring.h Satellite.h Satellite.cpp Separation.h \
 	Separation.cpp View.cpp View.h body.h buildPlanetMap.h \
 	buildPlanetMap.cpp createMap.h createMap.cpp \
@@ -116,16 +117,17 @@ am__xplanet_SOURCES_DIST = Map.cpp Map.h MapReduction.h OrbitMath.h \
 	sphericalToPixel.cpp xpGetopt.h xpUtil.cpp xpUtil.h \
 	xplanet.cpp ParseGeom.c ParseGeom.h
 @HAVE_LIBX11_FALSE@am__objects_1 = ParseGeom.$(OBJEXT)
-am_xplanet_OBJECTS = Map.$(OBJEXT) Options.$(OBJEXT) \
-	PlanetProperties.$(OBJEXT) Ring.$(OBJEXT) Satellite.$(OBJEXT) \
-	Separation.$(OBJEXT) View.$(OBJEXT) buildPlanetMap.$(OBJEXT) \
-	createMap.$(OBJEXT) drawMultipleBodies.$(OBJEXT) \
-	drawProjection.$(OBJEXT) findBodyXYZ.$(OBJEXT) \
-	findFile.$(OBJEXT) getopt.$(OBJEXT) getopt1.$(OBJEXT) \
-	parse.$(OBJEXT) parseColor.$(OBJEXT) printVersion.$(OBJEXT) \
-	readConfig.$(OBJEXT) readOriginFile.$(OBJEXT) ssec.$(OBJEXT) \
-	setPositions.$(OBJEXT) sphericalToPixel.$(OBJEXT) \
-	xpUtil.$(OBJEXT) xplanet.$(OBJEXT) $(am__objects_1)
+am_xplanet_OBJECTS = Map.$(OBJEXT) Options.$(OBJEXT) Omm.$(OBJEXT) \
+	SceneValidation.$(OBJEXT) PlanetProperties.$(OBJEXT) \
+	Ring.$(OBJEXT) Satellite.$(OBJEXT) Separation.$(OBJEXT) \
+	View.$(OBJEXT) buildPlanetMap.$(OBJEXT) createMap.$(OBJEXT) \
+	drawMultipleBodies.$(OBJEXT) drawProjection.$(OBJEXT) \
+	findBodyXYZ.$(OBJEXT) findFile.$(OBJEXT) getopt.$(OBJEXT) \
+	getopt1.$(OBJEXT) parse.$(OBJEXT) parseColor.$(OBJEXT) \
+	printVersion.$(OBJEXT) readConfig.$(OBJEXT) \
+	readOriginFile.$(OBJEXT) ssec.$(OBJEXT) setPositions.$(OBJEXT) \
+	sphericalToPixel.$(OBJEXT) xpUtil.$(OBJEXT) xplanet.$(OBJEXT) \
+	$(am__objects_1)
 xplanet_OBJECTS = $(am_xplanet_OBJECTS)
 xplanet_DEPENDENCIES = libannotate/libannotate.a \
 	libdisplay/libdisplay.a libdisplay/libtimer.a \
@@ -150,9 +152,10 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/Map.Po ./$(DEPDIR)/Options.Po \
-	./$(DEPDIR)/ParseGeom.Po ./$(DEPDIR)/PlanetProperties.Po \
-	./$(DEPDIR)/Ring.Po ./$(DEPDIR)/Satellite.Po \
+am__depfiles_remade = ./$(DEPDIR)/Map.Po ./$(DEPDIR)/Omm.Po \
+	./$(DEPDIR)/Options.Po ./$(DEPDIR)/ParseGeom.Po \
+	./$(DEPDIR)/PlanetProperties.Po ./$(DEPDIR)/Ring.Po \
+	./$(DEPDIR)/Satellite.Po ./$(DEPDIR)/SceneValidation.Po \
 	./$(DEPDIR)/Separation.Po ./$(DEPDIR)/View.Po \
 	./$(DEPDIR)/buildPlanetMap.Po ./$(DEPDIR)/createMap.Po \
 	./$(DEPDIR)/drawMultipleBodies.Po \
@@ -397,6 +400,10 @@ xplanet_SOURCES = \
 	OrbitMath.h		\
 	Options.cpp		\
 	Options.h		\
+	Omm.h			\
+	Omm.cpp			\
+	SceneValidation.h	\
+	SceneValidation.cpp	\
 	PlanetProperties.h	\
 	PlanetProperties.cpp	\
 	Ring.cpp		\
@@ -544,11 +551,13 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Map.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Omm.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Options.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ParseGeom.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/PlanetProperties.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Ring.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Satellite.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/SceneValidation.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Separation.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/View.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/buildPlanetMap.Po@am__quote@ # am--include-marker
@@ -804,11 +813,13 @@ clean-am: clean-binPROGRAMS clean-generic mostlyclean-am
 
 distclean: distclean-recursive
 		-rm -f ./$(DEPDIR)/Map.Po
+	-rm -f ./$(DEPDIR)/Omm.Po
 	-rm -f ./$(DEPDIR)/Options.Po
 	-rm -f ./$(DEPDIR)/ParseGeom.Po
 	-rm -f ./$(DEPDIR)/PlanetProperties.Po
 	-rm -f ./$(DEPDIR)/Ring.Po
 	-rm -f ./$(DEPDIR)/Satellite.Po
+	-rm -f ./$(DEPDIR)/SceneValidation.Po
 	-rm -f ./$(DEPDIR)/Separation.Po
 	-rm -f ./$(DEPDIR)/View.Po
 	-rm -f ./$(DEPDIR)/buildPlanetMap.Po
@@ -875,11 +886,13 @@ installcheck-am:
 
 maintainer-clean: maintainer-clean-recursive
 		-rm -f ./$(DEPDIR)/Map.Po
+	-rm -f ./$(DEPDIR)/Omm.Po
 	-rm -f ./$(DEPDIR)/Options.Po
 	-rm -f ./$(DEPDIR)/ParseGeom.Po
 	-rm -f ./$(DEPDIR)/PlanetProperties.Po
 	-rm -f ./$(DEPDIR)/Ring.Po
 	-rm -f ./$(DEPDIR)/Satellite.Po
+	-rm -f ./$(DEPDIR)/SceneValidation.Po
 	-rm -f ./$(DEPDIR)/Separation.Po
 	-rm -f ./$(DEPDIR)/View.Po
 	-rm -f ./$(DEPDIR)/buildPlanetMap.Po

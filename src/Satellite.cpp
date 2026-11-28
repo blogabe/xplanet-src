@@ -1,7 +1,10 @@
+#include <chrono>
 #include <clocale>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <iostream>
+#include <set>
 using namespace std;
 
 #include <sys/time.h>
@@ -20,6 +23,11 @@ Satellite::Satellite(char tle_lines[3][80])
     memcpy(tle_entry, tle_lines, 240);
 }
 
+Satellite::Satellite(const tle_t &elements, const std::string &name, const std::string &source)
+    : good(true), ommElements(elements), ommName(name), ommSource(source), tle(elements)
+{
+}
+
 Satellite::~Satellite()
 {
 }
@@ -33,7 +41,7 @@ Satellite::getID() const
 const char * 
 Satellite::getName() const
 {
-    return(tle.sat_name);
+    return ommName.empty() ? tle.sat_name : ommName.c_str();
 }
 
 bool
@@ -45,36 +53,72 @@ Satellite::isGoodData() const
 void
 Satellite::loadTLE()
 {
-    checkLocale(LC_NUMERIC, "C");
-    Get_Next_Tle_Set(tle_entry, &tle);
-    checkLocale(LC_NUMERIC, "");
+    if (ommElements.epoch_julian > 0)
+    {
+        tle = ommElements;
+    }
+    else
+    {
+        checkLocale(LC_NUMERIC, "C");
+        Get_Next_Tle_Set(tle_entry, &tle);
+        checkLocale(LC_NUMERIC, "");
+    }
     ClearFlag(ALL_FLAGS);
     select_ephemeris(&tle);  // SGP4 or SDP4 depending on period
 }
 
-void
+bool
+Satellite::propagationFailed(const char *reason) const
+{
+    if (ommSource.empty()) return false;
+
+    // The catalog is reloaded for every frame. Bound logging across reloads,
+    // duplicate marker rows and samples of a trail without hiding failures
+    // of other objects in the same frame.
+    using Clock = std::chrono::steady_clock;
+    static auto window = Clock::now();
+    static std::set<std::pair<std::string, int>> reported;
+    static bool suppressed = false;
+    const auto now = Clock::now();
+    if (now - window >= std::chrono::minutes(1))
+    {
+        reported.clear();
+        suppressed = false;
+        window = now;
+    }
+    if (reported.size() < 16)
+    {
+        if (reported.emplace(ommSource, getID()).second)
+            xpWarn("Cannot propagate OMM satellite " + std::to_string(getID()) + " from "
+                   + ommSource + ": " + reason + ".\n", __FILE__, __LINE__);
+    }
+    else if (!suppressed && reported.count({ommSource, getID()}) == 0)
+    {
+        xpWarn("Additional OMM propagation warnings suppressed for this minute.\n",
+               __FILE__, __LINE__);
+        suppressed = true;
+    }
+    return false;
+}
+
+bool
 Satellite::getSpherical(const time_t tv_sec, double &lat, double &lon,
                         double &alt)
 {
-    double jul_utc = toJulian(gmtime((time_t *) &tv_sec)->tm_year + 1900,
-                              gmtime((time_t *) &tv_sec)->tm_mon + 1,
-                              gmtime((time_t *) &tv_sec)->tm_mday,
-                              gmtime((time_t *) &tv_sec)->tm_hour,
-                              gmtime((time_t *) &tv_sec)->tm_min,
-                              gmtime((time_t *) &tv_sec)->tm_sec);
+    const tm *utc = gmtime(&tv_sec);
+    if (utc == NULL) return propagationFailed("render time is outside the supported UTC range");
+    const double jul_utc = toJulian(utc->tm_year + 1900, utc->tm_mon + 1,
+                                   utc->tm_mday, utc->tm_hour, utc->tm_min,
+                                   utc->tm_sec);
 
-    double year, day;
-    /* Modification to support Y2K */
-    /* Valid 1957 through 2056     */
-    day = modf(tle.epoch*1E-3, &year)*1E3;
-    if( year < 57 )
-        year = year + 2000;
-    else
-        year = year + 1900;
-    /* End modification */
-
-    double jul_epoch = toJulian((int) year,1,0,0,0,0);
-    jul_epoch += day;
+    double jul_epoch = tle.epoch_julian;
+    if (jul_epoch == 0)
+    {
+        double year;
+        const double day = modf(tle.epoch * 1E-3, &year) * 1E3;
+        year += year < 57 ? 2000 : 1900;  // TLE pivot: 1957 through 2056.
+        jul_epoch = toJulian(static_cast<int>(year), 1, 0, 0, 0, 0) + day;
+    }
 
     /* Zero vector for initializations */
     vector_t zero_vector = {0,0,0,0};
@@ -90,6 +134,10 @@ Satellite::getSpherical(const time_t tv_sec, double &lat, double &lon,
     
     /* Scale position and velocity vectors to km and km/sec */
     Convert_Sat_State( &pos, &vel );
+    if (tle.epoch_julian > 0 &&
+        (!std::isfinite(pos.w) || !std::isfinite(pos.x) || !std::isfinite(pos.y) ||
+         !std::isfinite(pos.z) || pos.w < 6350))
+        return propagationFailed("SGP4/SDP4 returned an invalid position");
 
     /* Satellite's predicted geodetic position */
     geodetic_t sat_geodetic;
@@ -105,17 +153,10 @@ Satellite::getSpherical(const time_t tv_sec, double &lat, double &lon,
     // return alt in units of earth radii
     alt = alt/6378.14 + 1;
 
-#if 0
-    cout << "BEGIN getSpherical()\n";
-    cout << getName() << endl;
-    cout << "day = " << day << "\tyear = " << year << endl;
-    cout << "tsince = " << tsince << endl;
-    cout << pos.x << '\t' << pos.y << '\t' << pos.z << endl;
-    cout << vel.x << '\t' << vel.y << '\t' << vel.z << endl;
-    cout << lat/deg_to_rad << '\t' << lon/deg_to_rad << '\t' 
-         << alt << endl;
-    cout << "END getSpherical()\n\n";
-#endif
+    if (tle.epoch_julian > 0 &&
+        (!std::isfinite(lat) || !std::isfinite(lon) || !std::isfinite(alt) || alt < 1))
+        return propagationFailed("calculated position is invalid or below Earth's surface");
+    return true;
 }
 
 void
@@ -144,4 +185,20 @@ bool
 Satellite::operator == (const Satellite &sat) const
 {
     return(tle.catnr == sat.tle.catnr);
+}
+
+bool
+parseSatelliteCatalogId(const char *text, int &id)
+{
+    if (text == NULL) return false;
+    if (*text == '+') ++text;  // Also accepted by legacy satellite annotation rows.
+    int value = 0;
+    for (int digits = 0; *text != '\0'; ++text, ++digits)
+    {
+        if (digits >= 9 || *text < '0' || *text > '9') return false;
+        value = value * 10 + (*text - '0');
+    }
+    if (value == 0) return false;
+    id = value;
+    return true;
 }

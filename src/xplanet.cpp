@@ -19,6 +19,7 @@ using namespace std;
 #include "Options.h"
 #include "PlanetProperties.h"
 #include "readOriginFile.h"
+#include "SceneValidation.h"
 #include "setPositions.h"
 #include "xpUtil.h"
 
@@ -74,6 +75,10 @@ main(int argc, char **argv)
     }
 
     Options *options = Options::getInstance();
+    // This is a mode selector, not a scene option or an option's argument.
+    if (argc > 1 && (strcmp(argv[1], "-validate") == 0
+                    || strcmp(argv[1], "--validate") == 0))
+        return SceneValidation::run(*options, argc, argv);
     options->parseArgs(argc, argv);
 
     if (options->Fork())

@@ -40,6 +40,7 @@ typedef struct
   char
     sat_name[26], /* Satellite name string    */
     idesg[9];     /* International Designator */
+  double epoch_julian; /* Full UTC epoch for OMM; zero for legacy TLE. */
 } tle_t; 
 
 /* Geodetic position structure */

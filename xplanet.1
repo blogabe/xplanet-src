@@ -73,7 +73,7 @@ Cassini orbiter.  Xplanet must be compiled with SPICE support and the
 required kernels must be present.  See the README in the spice
 subdirectory for more details.  Using "\-body norad20580" will center
 the field of view on NORAD ID 20580, which is the Hubble Space
-Telescope.  The appropriate TLE files must be present in this case.
+Telescope.  The appropriate TLE or OMM CSV companion must be present in this case.
 See the README in the satellites subdirectory for more information.
 
 Using "path" will center the field of view on the direction of motion
@@ -655,6 +655,13 @@ pixels but this may be set by the \-geometry flag.
 When using the X11 windowing system, draw to the window with the
 specified ID. 
 
+.TP
+.B \-validate
+Place this option before the normal scene options. Check scene inputs
+without rendering, running render hooks, or setting a wallpaper. Writes
+one JSON report to standard output with schema_version, valid and a
+diagnostics array. Returns zero for a valid scene (with or without warnings)
+and one when validation errors are detected.
 .TP
 .B \-window_title title
 Set the window's title to title.  This option implies \-window.

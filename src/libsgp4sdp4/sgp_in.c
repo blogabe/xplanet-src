@@ -116,6 +116,7 @@ Convert_Satellite_Data( char *tle_set, tle_t *tle )
   strncpy( buff, &tle_set[18],14 );
   buff[14] = '\0';
   tle->epoch = atof(buff);
+  tle->epoch_julian = 0;
 
   /* Satellite's First Time Derivative */
   strncpy( buff, &tle_set[33],10 );

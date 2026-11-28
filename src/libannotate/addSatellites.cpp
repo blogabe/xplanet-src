@@ -16,7 +16,9 @@ using namespace std;
 #include "OrbitMath.h"
 #include "parse.h"
 #include "PlanetProperties.h"
+#include "Omm.h"
 #include "Satellite.h"
+#include "SceneValidation.h"
 #include "sphericalToPixel.h"
 #include "View.h"
 #include "xpUtil.h"
@@ -62,8 +64,7 @@ calculateSatellitePosition(time_t tv_sec, const int id,
         if (id == satelliteVector[i].getID())
         {
             satelliteVector[i].loadTLE();
-            satelliteVector[i].getSpherical(tv_sec, lat, lon, rad);
-            return(true);
+            return satelliteVector[i].getSpherical(tv_sec, lat, lon, rad);
         }
     }
 
@@ -103,6 +104,7 @@ readSatelliteFile(const char *line, Planet *planet,
     int symbolSize = 2;
     double spacing = 0.1;
     bool syntaxError = false;
+    bool sawCatalogId = false;
     string timezone;
 
     int thickness = planetProperties->ArcThickness();
@@ -198,7 +200,13 @@ readSatelliteFile(const char *line, Planet *planet,
         case LATLON:
         {
             int id;
-            sscanf(returnString, "%d", &id);
+            if (!parseSatelliteCatalogId(returnString, id))
+            {
+                // Unrecognized options are returned as LATLON by the shared
+                // tokenizer. Legacy marker files ignore stray options.
+                break;
+            }
+            sawCatalogId = true;
             vector<Satellite>::iterator ii = satelliteVector.begin();
             while (ii != satelliteVector.end())
             {
@@ -313,7 +321,6 @@ readSatelliteFile(const char *line, Planet *planet,
         }
         break;
         case UNKNOWN:
-            syntaxError = true;
         default:
         case DELIMITER:
             break;
@@ -346,7 +353,9 @@ readSatelliteFile(const char *line, Planet *planet,
     if (satellite == NULL) 
     {
         ostringstream errStr;
-        errStr << "No satellite found for  \"" << line << "\"" << endl;
+        errStr << (sawCatalogId ? "No satellite found for "
+                               : "Satellite row has no valid catalog ID: ")
+               << '\"' << line << '\"' << endl;
         xpWarn(errStr.str(), __FILE__, __LINE__);
         return;
     }
@@ -368,7 +377,7 @@ readSatelliteFile(const char *line, Planet *planet,
     }
 
     double lat, lon, rad;
-    satellite->getSpherical(startTime, lat, lon, rad);
+    if (!satellite->getSpherical(startTime, lat, lon, rad)) return;
 
     if (outputFile.is_open() && endTime > startTime)
     {
@@ -409,7 +418,7 @@ readSatelliteFile(const char *line, Planet *planet,
         const double prevLon = lon;
         double prevRad = rad;
 
-        satellite->getSpherical(t, lat, lon, rad);
+        if (!satellite->getSpherical(t, lat, lon, rad)) break;
 
         if (trailType == ORBIT){
           // convert lon/lat/rad to inertial XYZ, then to lon/lat/rad at
@@ -460,7 +469,7 @@ readSatelliteFile(const char *line, Planet *planet,
         outputFile.close();
     }
 
-    satellite->getSpherical(options->TVSec(), lat, lon, rad);
+    if (!satellite->getSpherical(options->TVSec(), lat, lon, rad)) return;
     if (trailType == GROUND) rad = 1;
 
     double X, Y, Z;
@@ -512,79 +521,123 @@ readSatelliteFile(const char *line, Planet *planet,
     }
 }
 
+bool
+readSatelliteOrbitFile(const string &name, vector<Satellite> &satellites)
+{
+    string orbitFile;
+    if (!findCompanionFile(name, "satellites", {".tle", ".omm.csv"}, orbitFile))
+    {
+        const string message = "Can't load satellite orbit file " + name + ".tle or "
+                               + name + ".omm.csv.\n";
+        if (SceneValidation::active()) SceneValidation::requiredResourceError(message);
+        else xpWarn(message, __FILE__, __LINE__);
+        return false;
+    }
+
+    const bool csv = orbitFile.compare(orbitFile.size() - 4, 4, ".csv") == 0;
+    SceneValidation::satelliteOrbitSource(name, orbitFile, csv ? "OMM CSV" : "TLE");
+    ifstream inFile(orbitFile.c_str());
+    if (csv)
+    {
+        vector<omm::Record> records;
+        vector<omm::Diagnostic> diagnostics;
+        omm::readCsv(inFile, records, diagnostics);
+        for (const auto &d : diagnostics)
+        {
+            SceneValidation::Location location(orbitFile, d.line);
+            ostringstream warning;
+            if (!SceneValidation::active()) warning << orbitFile << ':' << d.line << ": ";
+            warning << d.message << '\n';
+            xpWarn(warning.str(), __FILE__, __LINE__);
+        }
+        if (records.empty() && SceneValidation::active())
+        {
+            SceneValidation::Location location(orbitFile);
+            SceneValidation::requiredResourceError("No usable OMM orbital records found.");
+        }
+        for (const auto &entry : records)
+            satellites.emplace_back(entry.elements, entry.name, orbitFile);
+        return !records.empty();
+    }
+
+    const auto start = satellites.size();
+    char lines[3][80] = {};
+    char line[80] = {};
+    size_t number = 0, firstLine = 0;
+    bool haveFirst = false;
+    const auto badTle = [&](size_t lineNumber, const char *message)
+    {
+        SceneValidation::Location location(orbitFile, lineNumber);
+        ostringstream error;
+        if (!SceneValidation::active()) error << orbitFile << ':' << lineNumber << ": ";
+        error << message << '\n';
+        xpWarn(error.str(), __FILE__, __LINE__);
+    };
+    for (;;)
+    {
+        SceneValidation::Location location(orbitFile, number + 1);
+        const auto status = readBoundedRecord(inFile, line, sizeof(line), orbitFile, number);
+        if (status == RecordStatus::End) break;
+        if (status == RecordStatus::Invalid)
+        {
+            haveFirst = false;
+            lines[0][0] = '\0';
+            continue;
+        }
+        if (line[0] == '1' && line[1] == ' ')
+        {
+            if (haveFirst)
+            {
+                badTle(firstLine, "Incomplete TLE record");
+                lines[0][0] = '\0';
+            }
+            memcpy(lines[1], line, sizeof(line));
+            haveFirst = true;
+            firstLine = number;
+            continue;
+        }
+        if (line[0] != '2' || line[1] != ' ')
+        {
+            if (haveFirst) badTle(firstLine, "Incomplete TLE record");
+            haveFirst = false;
+            memcpy(lines[0], line, sizeof(line));
+            continue;
+        }
+        if (!haveFirst)
+        {
+            badTle(number, "Unpaired TLE line 2");
+            continue;
+        }
+        memcpy(lines[2], line, sizeof(line));
+        haveFirst = false;
+        Satellite sat(lines);
+        lines[0][0] = '\0';
+
+        if (!sat.isGoodData())
+        {
+            badTle(firstLine, "Bad TLE data");
+            continue;
+        }
+        satellites.push_back(sat);
+    }
+    if (haveFirst) badTle(firstLine, "Incomplete final TLE record");
+    if (satellites.size() == start)
+    {
+        const string message = "No usable TLE orbital records found.\n";
+        const SceneValidation::Location location(orbitFile);
+        if (SceneValidation::active()) SceneValidation::requiredResourceError(message);
+        else xpWarn(orbitFile + ": " + message, __FILE__, __LINE__);
+        return false;
+    }
+    return true;
+}
+
 void
 loadSatelliteVector(PlanetProperties *planetProperties)
 {
-    vector<string> satfiles = planetProperties->SatelliteFiles();
-    vector<string>::iterator ii = satfiles.begin();
-
     satelliteVector.clear();
-
-    while (ii != satfiles.end()) 
-    {
-        string tleFile = *ii + ".tle";
-
-        const bool foundFile = findFile(tleFile, "satellites");
-        if (foundFile)
-        {
-            ifstream inFile(tleFile.c_str());
-            char lines[3][80] = {};
-            char line[80] = {};
-            size_t number = 0;
-            bool haveFirst = false;
-            for (;;)
-            {
-                const auto status = readBoundedRecord(inFile, line, sizeof(line),
-                                                      tleFile, number);
-                if (status == RecordStatus::End) break;
-                if (status == RecordStatus::Invalid)
-                {
-                    haveFirst = false;
-                    lines[0][0] = '\0';
-                    continue;
-                }
-                if (line[0] == '1' && line[1] == ' ')
-                {
-                    if (haveFirst) lines[0][0] = '\0';
-                    memcpy(lines[1], line, sizeof(line));
-                    haveFirst = true;
-                    continue;
-                }
-                if (line[0] != '2' || line[1] != ' ')
-                {
-                    haveFirst = false;
-                    memcpy(lines[0], line, sizeof(line));
-                    continue;
-                }
-                if (!haveFirst) continue;  // Unpaired line 2; look for the next set.
-                memcpy(lines[2], line, sizeof(line));
-                haveFirst = false;
-                Satellite sat(lines);
-                lines[0][0] = '\0';
-                
-                if (!sat.isGoodData()) 
-                {
-                    ostringstream errStr;
-                    errStr << "Bad TLE data in " << tleFile << endl;
-                    xpWarn(errStr.str(), __FILE__, __LINE__);
-                    continue;
-                }
-                
-                satelliteVector.push_back(sat);
-            }
-            if (haveFirst)
-                xpWarn(tleFile + ": incomplete final TLE record.\n", __FILE__, __LINE__);
-            
-            inFile.close();
-        }
-        else
-        {
-            ostringstream errStr;
-            errStr << "Can't load satellite TLE file " << tleFile << endl;
-            xpWarn(errStr.str(), __FILE__, __LINE__);
-        }
-        ii++;
-    }
+    for (const auto &name : planetProperties->SatelliteFiles())
+        readSatelliteOrbitFile(name, satelliteVector);
 }
 
 void

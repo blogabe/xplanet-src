@@ -3,6 +3,8 @@
 Run `make check` from the build directory. The native checks cover:
 
 - Five-digit and Alpha-5 satellite catalog IDs, including name handling.
+  OMM CSV checks exercise fractional UTC epochs, six- and nine-digit IDs
+  and the propagation path without network access.
 - Map downsampling for square, rectangular, odd-sized and one-row maps.
 - Image reads and enabled codec round trips, including decoded-size bounds,
   PNG alpha and bit depth, grayscale JPEG, recoverable JPEG warnings, and
@@ -26,6 +28,11 @@ directory. They don't use the current user's maps or change the desktop.
 - Additional cases check refresh recovery, timezone restoration, observer
   records, invalid options, exact decimal notation for integer settings,
   and continued rendering after overlong annotation and TLE records.
+
+Separate CLI checks compare fixed-date TLE and OMM images and trail
+coordinates and exercise six- and nine-digit OMM IDs, companion search
+precedence, legacy marker options, bounded propagation warnings, and the
+side-effect-free `-validate` JSON and exit status.
 
 When building from a Git checkout, run `./prepare-build.sh` before configuring
 if timestamps would trigger regeneration. For changes to the build inputs,

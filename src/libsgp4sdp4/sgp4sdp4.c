@@ -97,7 +97,8 @@ SGP4(double tsince, tle_t *tle, vector_t *pos, vector_t *vel)
       c1 = tle->bstar*c2;
       sinio = sin(tle->xincl);
       a3ovk2 = -xj3/ck2*pow(ae,3);
-      c3 = coef*tsi*a3ovk2*xnodp*ae*sinio/tle->eo;
+      c3 = tle->epoch_julian > 0 && tle->eo == 0
+             ? 0 : coef*tsi*a3ovk2*xnodp*ae*sinio/tle->eo;
       x1mth2 = 1-theta2;
       c4 = 2*xnodp*coef1*aodp*betao2*(eta*(2+0.5*etasq)+
 	   tle->eo*(0.5+2*etasq)-2*ck2*tsi/(aodp*psisq)*
@@ -117,10 +118,13 @@ SGP4(double tsince, tle_t *tle, vector_t *pos, vector_t *vel)
       xnodot = xhdot1+(0.5*temp2*(4-19*theta2)+
 	       2*temp3*(3-7*theta2))*cosio;
       omgcof = tle->bstar*c3*cos(tle->omegao);
-      xmcof = -tothrd*coef*tle->bstar*ae/eeta;
+      xmcof = tle->epoch_julian > 0 && tle->eo == 0
+                ? 0 : -tothrd*coef*tle->bstar*ae/eeta;
       xnodcf = 3.5*betao2*xhdot1*c1;
       t2cof = 1.5*c1;
-      xlcof = 0.125*a3ovk2*sinio*(3+5*cosio)/(1+cosio);
+      temp = 1+cosio;
+      if (tle->epoch_julian > 0 && temp < 1.5E-12) temp = 1.5E-12;
+      xlcof = 0.125*a3ovk2*sinio*(3+5*cosio)/temp;
       aycof = 0.25*a3ovk2*sinio;
       delmo = pow(1+eta*cos(tle->xmo),3);
       sinmo = sin(tle->xmo);
@@ -354,8 +358,9 @@ SDP4(double tsince, tle_t *tle, vector_t *pos, vector_t *vel)
 		        2*temp3*(3-7*deep_arg.theta2))*deep_arg.cosio;
       xnodcf = 3.5*deep_arg.betao2*xhdot1*c1;
       t2cof = 1.5*c1;
-      xlcof = 0.125*a3ovk2*deep_arg.sinio*(3+5*deep_arg.cosio)/
-              (1+deep_arg.cosio);
+      temp = 1+deep_arg.cosio;
+      if (tle->epoch_julian > 0 && temp < 1.5E-12) temp = 1.5E-12;
+      xlcof = 0.125*a3ovk2*deep_arg.sinio*(3+5*deep_arg.cosio)/temp;
       aycof = 0.25*a3ovk2*deep_arg.sinio;
       x7thm1 = 7*deep_arg.theta2-1;
 
@@ -513,7 +518,15 @@ Deep(int ientry, tle_t *tle, deep_arg_t *deep_arg)
   switch(ientry)
     {
     case dpinit : /* Entrance for deep space initialization */
-      thgr = ThetaG(tle->epoch, deep_arg);
+      if (tle->epoch_julian > 0)
+      {
+        /* Same deep-space epoch and sidereal angle as ThetaG(), but
+           without the two-digit TLE year and day-of-year conversion. */
+        deep_arg->ds50 = tle->epoch_julian - 2433281.5;
+        thgr = FMod2p(6.3003880987 * deep_arg->ds50 + 1.72944494);
+      }
+      else
+        thgr = ThetaG(tle->epoch, deep_arg);
       eq = tle->eo;
       xnq = deep_arg->xnodp;
       aqnv = 1/deep_arg->aodp;
@@ -635,7 +648,8 @@ Deep(int ientry, tle_t *tle, deep_arg_t *deep_arg)
 	  sse = se;
 	  ssi = si;
 	  ssl = sl;
-	  ssh = sh/deep_arg->sinio;
+	  ssh = tle->epoch_julian > 0 && fabs(deep_arg->sinio) < 1.0E-12
+                  ? 0 : sh/deep_arg->sinio;
 	  ssg = sgh-deep_arg->cosio*ssh;
 	  se2 = ee2;
 	  si2 = xi2;
@@ -665,8 +679,13 @@ Deep(int ientry, tle_t *tle, deep_arg_t *deep_arg)
       sse = sse+se;
       ssi = ssi+si;
       ssl = ssl+sl;
-      ssg = ssg+sgh-deep_arg->cosio/deep_arg->sinio*sh;
-      ssh = ssh+sh/deep_arg->sinio;
+      if (tle->epoch_julian > 0 && fabs(deep_arg->sinio) < 1.0E-12)
+        ssg += sgh;
+      else
+      {
+        ssg = ssg+sgh-deep_arg->cosio/deep_arg->sinio*sh;
+        ssh = ssh+sh/deep_arg->sinio;
+      }
 
       /* Geopotential resonance initialization for 12 hour orbits */
       ClearFlag(RESONANCE_FLAG);
@@ -978,7 +997,8 @@ Deep(int ientry, tle_t *tle, deep_arg_t *deep_arg)
       if (xqncl >= 0.2)
 	{
 	  /* Apply periodics directly */
-	  ph = ph/deep_arg->sinio;
+	  ph = tle->epoch_julian > 0 && fabs(deep_arg->sinio) < 1.0E-12
+                 ? 0 : ph/deep_arg->sinio;
 	  pgh = pgh-deep_arg->cosio*ph;
 	  deep_arg->omgadf = deep_arg->omgadf+pgh;
 	  deep_arg->xnode = deep_arg->xnode+ph;

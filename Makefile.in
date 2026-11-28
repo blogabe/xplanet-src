@@ -413,7 +413,7 @@ nobase_dist_data_DATA = \
 	xplanet/spice/voyager.krn	\
 	xplanet/stars/BSC
 
-EXTRA_DIST = xplanet.1 $(sources) README.md prepare-build.sh tests/README.md tests/tle_catalog.c tests/map_reduction.cpp tests/image_read.cpp tests/rayleigh_table.cpp tests/orbit_math.cpp tests/parse_token.cpp tests/check-renderer.sh
+EXTRA_DIST = xplanet.1 $(sources) README.md prepare-build.sh tests/README.md tests/tle_catalog.c tests/map_reduction.cpp tests/image_read.cpp tests/rayleigh_table.cpp tests/orbit_math.cpp tests/parse_token.cpp tests/omm.cpp tests/check-renderer.sh tests/check-validation.sh tests/check-omm.sh
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -995,8 +995,14 @@ check-local:
 	  "$$tmp/orbit-math"; \
 	  $(CXX) $(CPPFLAGS) $(CXXFLAGS) -I"$(abs_srcdir)/src" \
 	    "$(abs_srcdir)/tests/parse_token.cpp" -o "$$tmp/parse-token"; \
-	  "$$tmp/parse-token"
+	  "$$tmp/parse-token"; \
+	  $(CXX) $(CPPFLAGS) $(CXXFLAGS) -I"$(abs_srcdir)/src" \
+	    "$(abs_srcdir)/tests/omm.cpp" "$(abs_srcdir)/src/Omm.cpp" \
+	    "$(abs_builddir)/src/libsgp4sdp4/libsgp4sdp4.a" -lm -o "$$tmp/omm"; \
+	  "$$tmp/omm"
 	$(SHELL) "$(abs_srcdir)/tests/check-renderer.sh" "$(abs_builddir)/src/xplanet" "$(abs_srcdir)/xplanet"
+	$(SHELL) "$(abs_srcdir)/tests/check-omm.sh" "$(abs_builddir)/src/xplanet" "$(abs_srcdir)/xplanet"
+	$(SHELL) "$(abs_srcdir)/tests/check-validation.sh" "$(abs_builddir)/src/xplanet" "$(abs_srcdir)"
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

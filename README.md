@@ -22,7 +22,8 @@ xplanet -version
 The fully qualified formula name selects this tap instead of Homebrew's core
 formula. The tap builds the renderer from a packaged source archive, so
 Subversion is not needed. It currently installs the maintained `1.3.1.225`
-build, not the `1.4.0` work in this repository.
+build. The 1.5.0 development work described here is not available through
+the tap.
 
 ## Render an image
 
@@ -57,6 +58,42 @@ can slightly change pixels in some planetary views. Corrected interpolation
 rounding also changes pixel values when relief, cloud or specular maps are
 resized to match the day map. These changes are intentional.
 
+## Check a scene before rendering
+
+Put `-validate` first, followed by your render's input options, to check
+the scene without rendering a frame, setting wallpaper or running hooks.
+
+```sh
+xplanet -validate -target earth -searchdir ./my-scene -config earth.conf
+```
+
+It writes one JSON report to stdout and exits with status 0 for a valid
+scene or 1 for errors. The report has `schema_version`, `valid` and
+`diagnostics` keys. Each diagnostic has a `severity`, `code` and `message`,
+with file, line and field details where known. Recoverable issues, such as
+a duplicate OMM row or missing cloud image, are warnings and do not fail
+validation. An info diagnostic names the selected orbit file. The check parses scene options, config, observer data and
+satellite elements, verifies satellite IDs, decodes configured maps and
+checks the native JPL header. Other resources, including marker and arc
+files, fonts, star catalogs and SPICE inputs, are checked for readability,
+not full content or runtime validity. A clean report does not guarantee
+render or Finder success.
+
+## Track a satellite with OMM data
+
+Existing TLE and Alpha-5 configurations still work. To use CelesTrak's
+OMM CSV, point `satellite_file` to a marker list (for example, `tracked`).
+Save the CSV beside it as `tracked.omm.csv` and put the decimal catalog IDs
+in `tracked`. Xplanet looks for orbit files in the current directory,
+then along the normal search path. The marker list’s location does not
+change that order. If both formats are present in the same directory,
+it uses TLE.
+
+Use an Earth, TEME, UTC, SGP4 element set. The reader accepts IDs up to nine
+digits and reads the CSV directly without converting it to TLE. See the
+[satellite input examples](xplanet/satellites/README) and
+[CelesTrak's format guide](https://celestrak.org/NORAD/documentation/gp-data-formats.php).
+
 ## Try another scene
 
 Catalog stars are visible in the sky around a globe, not on a map that
@@ -80,6 +117,12 @@ or [higher-precision planetary positions](xplanet/ephemeris/README).
 Use [current orbital elements](xplanet/satellites/README) for live
 Earth satellite overlays.
 
+## What’s new in 1.5.0 (unreleased)
+
+- Track satellites with OMM CSV and catalog IDs up to nine digits. Existing
+  TLE and Alpha-5 setups still work.
+- Check a scene before rendering with `-validate` and get a JSON report.
+
 ## What’s new in 1.4.0
 
 - Alpha-5 catalog IDs work in satellite element files.
@@ -90,7 +133,7 @@ Earth satellite overlays.
 - Existing setups should review the output-path and missing-map behavior
   above. X11 is no longer supported in this fork.
 
-## Platform support in 1.4.0
+## Platform support
 
 - **macOS (Apple silicon):** Render to a file or use the Aqua backend for
   wallpaper. If macOS asks whether the app launching Xplanet can control
