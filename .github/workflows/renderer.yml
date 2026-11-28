@@ -1,0 +1,53 @@
+name: Renderer checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: renderer-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  make-check:
+    name: ${{ matrix.lane }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - lane: Linux headless
+            runner: ubuntu-24.04
+            profile: linux
+          - lane: macOS Apple silicon (tap defaults)
+            runner: macos-26
+            profile: macos
+          - lane: macOS Apple silicon (CSPICE)
+            runner: macos-26
+            profile: macos-cspice
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Install Linux prerequisites
+        if: matrix.profile == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y build-essential pkgconf libgif-dev libjpeg-dev libpng-dev libtiff-dev libfreetype-dev
+      - name: Install macOS prerequisites
+        if: runner.os == 'macOS'
+        env:
+          PROFILE: ${{ matrix.profile }}
+          HOMEBREW_NO_AUTO_UPDATE: 1
+        run: |
+          brew install pkgconf freetype giflib jpeg-turbo libpng libtiff
+          if [ "$PROFILE" = macos-cspice ]; then brew install cspice; fi
+      - name: Build and run offline tests
+        env:
+          PROFILE: ${{ matrix.profile }}
+        run: sh tests/ci-build.sh "$PROFILE"
